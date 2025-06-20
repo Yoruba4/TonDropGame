@@ -1,62 +1,66 @@
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(to right, #dff9fb, #c7ecee);
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(to bottom right, #ffefba, #ffffff);
   text-align: center;
   margin: 0;
-  padding: 20px;
+  padding: 0;
 }
 
 h1 {
-  color: #130f40;
+  color: #333;
+  margin-top: 20px;
 }
 
-#game-area {
-  margin: 20px auto;
+.wallet-box {
+  margin-top: 20px;
+}
+
+input[type="text"] {
   padding: 10px;
-  background: #ffffffaa;
-  border-radius: 10px;
-  width: fit-content;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-
-canvas {
-  background: #f1f2f6;
-  border: 2px solid #95afc0;
+  width: 60%;
+  max-width: 300px;
+  font-size: 16px;
+  border: 1px solid #ccc;
   border-radius: 8px;
 }
 
-#score-display,
-#total-score,
-#boost-status {
-  font-size: 20px;
-  margin: 10px;
-}
-
-#wallet-area input {
-  padding: 10px;
-  width: 200px;
-}
-
-#wallet-area button,
-#buy-boost {
-  margin-top: 10px;
+button {
   padding: 10px 15px;
-  background-color: #2ecc71;
-  color: white;
+  margin-left: 10px;
+  font-size: 16px;
   border: none;
+  background-color: #007bff;
+  color: white;
   border-radius: 8px;
   cursor: pointer;
 }
 
-#buy-boost {
-  background-color: #f39c12;
+button:hover {
+  background-color: #0056b3;
+}
+
+#gameCanvas {
+  border: 2px solid #000;
+  background-color: #e0f7fa;
+  display: none;
+  margin: 20px auto;
+  display: block;
+}
+
+#score {
+  font-size: 24px;
+  margin-top: 10px;
 }
 
 #leaderboard {
-  margin-top: 30px;
+  list-style-type: none;
+  padding: 0;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
-#leaderboard-list {
-  list-style: none;
-  padding: 0;
+#leaderboard li {
+  padding: 6px;
+  font-size: 18px;
+  border-bottom: 1px solid #ccc;
 }
