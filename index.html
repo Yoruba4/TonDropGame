@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TonDrop Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>🔥 TonDrop</h1>
+
+  <div id="game-area">
+    <canvas id="game-canvas" width="300" height="400"></canvas>
+    <div id="score-display">Score: 0</div>
+    <div id="boost-status">Boost: ❌</div>
+    <div id="total-score">Total Score: 0</div>
+  </div>
+
+  <div id="wallet-area">
+    <input type="text" id="wallet-input" placeholder="Enter your TON wallet" />
+    <button id="save-wallet-btn">Save Wallet</button>
+  </div>
+
+  <div id="boost-area">
+    <button id="buy-boost">Buy 3-Day Boost (0.5 TON)</button>
+  </div>
+
+  <div id="leaderboard">
+    <h2>Leaderboard</h2>
+    <ul id="leaderboard-list"></ul>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
