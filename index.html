@@ -3,22 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TonDrop Game</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>TonDrop</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <h1>TonDrop Game</h1>
+  <div class="container">
+    <h1>TonDrop Game</h1>
 
-  <div class="wallet-box">
-    <input type="text" id="wallet" placeholder="Enter your TON wallet" />
-    <button id="saveWallet">Save Wallet</button>
+    <div class="wallet-section">
+      <input type="text" id="walletInput" placeholder="Enter your TON wallet" />
+      <button onclick="saveWallet()">Save Wallet</button>
+    </div>
+
+    <div id="gameArea" class="game-area">
+      <button id="startBtn" onclick="startGame()">Start Game</button>
+      <canvas id="gameCanvas" width="300" height="400"></canvas>
+      <p id="currentScore">Score: 0</p>
+      <p id="totalScore">Total Score: 0</p>
+    </div>
+
+    <div class="leaderboard">
+      <h3>Leaderboard</h3>
+      <ul id="leaderboardList"></ul>
+    </div>
+
+    <div class="dev-wallet">
+      <p><strong>Send 0.5 TON</strong> to boost score:</p>
+      <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
+    </div>
   </div>
-
-  <canvas id="gameCanvas"></canvas>
-  <div id="score">Score: 0</div>
-
-  <h2>Leaderboard</h2>
-  <ul id="leaderboard"></ul>
 
   <script src="script.js"></script>
 </body>
