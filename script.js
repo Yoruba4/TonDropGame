@@ -1,77 +1,125 @@
-const telegram = window.Telegram.WebApp;
-telegram.expand();
+const backendURL = "https://tondropgamebackend.onrender.com";
+let tg = window.Telegram.WebApp;
+let telegramId = tg?.initDataUnsafe?.user?.id || null;
+let score = 0, gameInterval, objects = [];
 
-const apiBase = "https://tondropgamebackend.onrender.com";
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-const connectBtn = document.getElementById("connect-btn");
-const saveWalletBtn = document.getElementById("save-wallet-btn");
-const walletInput = document.getElementById("wallet-input");
-const scoreDisplay = document.getElementById("score");
-const totalScoreDisplay = document.getElementById("total-score");
-const leaderboardList = document.getElementById("leaderboard-list");
-const tapBtn = document.getElementById("tap-btn");
+function drawObjects() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  objects.forEach(obj => {
+    ctx.fillStyle = obj.type === 'ton' ? 'gold' : obj.type === 'bomb' ? 'red' : 'lightblue';
+    ctx.beginPath();
+    ctx.arc(obj.x, obj.y, 15, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
 
-let telegramId = null;
-let score = 0;
+function spawnObject() {
+  const type = Math.random() < 0.7 ? 'ton' : (Math.random() < 0.5 ? 'bomb' : 'freeze');
+  objects.push({ x: Math.random() * 280 + 10, y: 0, type });
+}
 
-// INIT
-window.onload = async () => {
-  if (!telegram.initDataUnsafe?.user?.id) {
-    alert("Telegram not connected");
-    return;
+function updateObjects() {
+  objects.forEach(obj => obj.y += 4);
+  objects = objects.filter(obj => obj.y < canvas.height);
+  drawObjects();
+}
+
+canvas.addEventListener("click", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  for (let i = 0; i < objects.length; i++) {
+    const obj = objects[i];
+    const dist = Math.hypot(obj.x - clickX, obj.y - clickY);
+    if (dist < 20) {
+      if (obj.type === 'ton') {
+        score += 1;
+        document.getElementById("currentScore").innerText = `Score: ${score}`;
+      } else if (obj.type === 'freeze') {
+        clearInterval(gameInterval);
+        setTimeout(() => {
+          gameInterval = setInterval(() => {
+            spawnObject();
+            updateObjects();
+          }, 500);
+        }, 3000);
+      } else if (obj.type === 'bomb') {
+        endGame();
+        return;
+      }
+      objects.splice(i, 1);
+      break;
+    }
   }
+});
 
-  telegramId = telegram.initDataUnsafe.user.id.toString();
+function startGame() {
+  score = 0;
+  objects = [];
+  document.getElementById("currentScore").innerText = "Score: 0";
+  gameInterval = setInterval(() => {
+    spawnObject();
+    updateObjects();
+  }, 500);
+}
 
-  // Load total score
-  fetch(`${apiBase}/my-score/${telegramId}`)
-    .then((res) => res.json())
-    .then((data) => {
-      totalScoreDisplay.innerText = `Total Score: ${data.totalScore || 0}`;
-    });
+function endGame() {
+  clearInterval(gameInterval);
+  alert("💥 You hit a bomb!");
+  if (!telegramId) return alert("Telegram not connected");
 
-  // Load leaderboard
-  fetch(`${apiBase}/leaderboard`)
-    .then((res) => res.json())
-    .then((players) => {
-      leaderboardList.innerHTML = "";
-      players.forEach((p, i) => {
-        const li = document.createElement("li");
-        li.innerText = `${i + 1}. ${p.wallet?.slice(0, 8) || "User"} - ${p.totalScore}`;
-        leaderboardList.appendChild(li);
-      });
-    });
-};
-
-// Tapping to earn points
-tapBtn.addEventListener("click", () => {
-  score += 1;
-  scoreDisplay.innerText = `Score: ${score}`;
-
-  // Send score to backend
-  fetch(`${apiBase}/score`, {
+  fetch(`${backendURL}/submit-score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, score }),
+  }).then(res => res.json()).then(() => {
+    fetchTotalScore();
+    fetchLeaderboard();
   });
-});
+}
 
-// Save wallet
-saveWalletBtn.addEventListener("click", () => {
-  const wallet = walletInput.value.trim();
-  if (!wallet) return alert("Enter your wallet address");
+function saveWallet() {
+  const wallet = document.getElementById("walletInput").value;
+  if (!telegramId) return alert("Telegram not connected");
+  if (!wallet) return alert("Enter wallet");
 
-  fetch(`${apiBase}/wallet`, {
+  fetch(`${backendURL}/save-wallet`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, wallet }),
-  })
-    .then((res) => res.json())
-    .then((res) => {
-      if (res.success) {
-        alert("Wallet saved!");
-      } else {
-        alert("Failed to save wallet");
-      }
+  }).then(res => res.json()).then(data => {
+    alert(data.success ? "Wallet saved!" : "Failed to save");
+  });
+}
+
+function fetchTotalScore() {
+  if (!telegramId) return;
+  fetch(`${backendURL}/player/${telegramId}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("totalScore").innerText = `Total Score: ${data.totalScore || 0}`;
     });
-});
+}
+
+function fetchLeaderboard() {
+  fetch(`${backendURL}/leaderboard`)
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById("leaderboardList");
+      list.innerHTML = "";
+      data.forEach(player => {
+        const li = document.createElement("li");
+        li.innerText = `ID: ${player.telegramId.slice(-5)} | Score: ${player.totalScore}`;
+        list.appendChild(li);
+      });
+    });
+}
+
+window.onload = () => {
+  fetchTotalScore();
+  fetchLeaderboard();
+};
