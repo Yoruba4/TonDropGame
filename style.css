@@ -1,66 +1,51 @@
 body {
-  font-family: 'Arial', sans-serif;
-  background: linear-gradient(to bottom right, #ffefba, #ffffff);
+  font-family: Arial, sans-serif;
   text-align: center;
+  background: linear-gradient(to right, #00c6ff, #0072ff);
+  color: #fff;
   margin: 0;
-  padding: 0;
+  padding: 20px;
 }
 
-h1 {
-  color: #333;
-  margin-top: 20px;
+.container {
+  max-width: 400px;
+  margin: auto;
+  padding: 20px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
 }
 
-.wallet-box {
-  margin-top: 20px;
-}
-
-input[type="text"] {
+input, button {
   padding: 10px;
-  width: 60%;
-  max-width: 300px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  margin: 5px;
+  border-radius: 6px;
+  border: none;
 }
 
 button {
-  padding: 10px 15px;
-  margin-left: 10px;
-  font-size: 16px;
-  border: none;
-  background-color: #007bff;
+  background-color: #222;
   color: white;
-  border-radius: 8px;
   cursor: pointer;
 }
 
-button:hover {
-  background-color: #0056b3;
+canvas {
+  background: #fff;
+  margin: 10px 0;
+  border-radius: 8px;
 }
 
-#gameCanvas {
-  border: 2px solid #000;
-  background-color: #e0f7fa;
-  display: none;
-  margin: 20px auto;
-  display: block;
+.leaderboard, .dev-wallet {
+  margin-top: 20px;
 }
 
-#score {
-  font-size: 24px;
-  margin-top: 10px;
-}
-
-#leaderboard {
-  list-style-type: none;
+ul {
+  list-style: none;
   padding: 0;
-  max-width: 400px;
-  margin: 0 auto;
 }
 
-#leaderboard li {
+ul li {
+  background: rgba(255,255,255,0.2);
+  margin: 5px 0;
   padding: 6px;
-  font-size: 18px;
-  border-bottom: 1px solid #ccc;
+  border-radius: 5px;
 }
