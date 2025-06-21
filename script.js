@@ -1,8 +1,9 @@
 const backendURL = "https://tondropgamebackend.onrender.com";
 let tg = window.Telegram.WebApp;
 let telegramId = tg?.initDataUnsafe?.user?.id || null;
-console.log("Telegram ID:", telegramId);
 let score = 0, gameInterval, objects = [];
+
+console.log("Telegram ID:", telegramId);
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -43,10 +44,7 @@ canvas.addEventListener("click", (e) => {
       } else if (obj.type === 'freeze') {
         clearInterval(gameInterval);
         setTimeout(() => {
-          gameInterval = setInterval(() => {
-            spawnObject();
-            updateObjects();
-          }, 500);
+          gameInterval = setInterval(gameLoop, 500);
         }, 3000);
       } else if (obj.type === 'bomb') {
         endGame();
@@ -58,39 +56,37 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
+function gameLoop() {
+  spawnObject();
+  updateObjects();
+}
+
 function startGame() {
   score = 0;
   objects = [];
   document.getElementById("currentScore").innerText = "Score: 0";
-  gameInterval = setInterval(() => {
-    spawnObject();
-    updateObjects();
-  }, 500);
+  gameInterval = setInterval(gameLoop, 500);
 }
 
 function endGame() {
   clearInterval(gameInterval);
   alert("💥 You hit a bomb!");
   if (!telegramId) return alert("Telegram not connected");
-fetch(`${backendURL}/submit-score`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ telegramId, score }),
-})
-  .then(res => res.json())
-  .then(data => {
-    console.log("Score submission response:", data);
-    fetchTotalScore();
-    fetchLeaderboard();
+
+  fetch(`${backendURL}/submit-score`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId, score }),
   })
-  .catch(err => {
-    console.error("Submit score error:", err);
-  });
-   else {
-        alert("Failed to save score");
-      }
+    .then(res => res.json())
+    .then(data => {
+      console.log("Score submission response:", data);
+      fetchTotalScore();
+      fetchLeaderboard();
     })
-    .catch(() => alert("Error saving score"));
+    .catch(err => {
+      console.error("Submit score error:", err);
+    });
 }
 
 function saveWallet() {
@@ -106,19 +102,15 @@ function saveWallet() {
     .then(res => res.json())
     .then(data => {
       alert(data.success ? "Wallet saved!" : "Failed to save");
-    })
-    .catch(() => alert("Error saving wallet"));
+    });
 }
 
 function fetchTotalScore() {
   if (!telegramId) return;
-  fetch(`${backendURL}/my-score/${telegramId}`)
+  fetch(`${backendURL}/player/${telegramId}`)
     .then(res => res.json())
     .then(data => {
       document.getElementById("totalScore").innerText = `Total Score: ${data.totalScore || 0}`;
-    })
-    .catch(() => {
-      document.getElementById("totalScore").innerText = "Total Score: 0";
     });
 }
 
@@ -139,4 +131,5 @@ function fetchLeaderboard() {
 window.onload = () => {
   fetchTotalScore();
   fetchLeaderboard();
+  startGame();
 };
