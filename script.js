@@ -71,18 +71,21 @@ function endGame() {
   clearInterval(gameInterval);
   alert("💥 You hit a bomb!");
   if (!telegramId) return alert("Telegram not connected");
-
-  fetch(`${backendURL}/score`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId, score }),
+fetch(`${backendURL}/submit-score`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ telegramId, score }),
+})
+  .then(res => res.json())
+  .then(data => {
+    console.log("Score submission response:", data);
+    fetchTotalScore();
+    fetchLeaderboard();
   })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        fetchTotalScore();
-        fetchLeaderboard();
-      } else {
+  .catch(err => {
+    console.error("Submit score error:", err);
+  });
+   else {
         alert("Failed to save score");
       }
     })
