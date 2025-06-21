@@ -2,9 +2,8 @@ const backendURL = "https://tondropgamebackend.onrender.com";
 let tg = window.Telegram.WebApp;
 let telegramId = tg?.initDataUnsafe?.user?.id || null;
 
-let score = 0, gameInterval = null, objects = [];
+let score = 0, gameInterval = null, spawnInterval = null, objects = [];
 
-// DOM
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -23,13 +22,18 @@ function drawObjects() {
 
 function spawnObject() {
   const rand = Math.random();
-  const type = rand < 0.7 ? "ton" : rand < 0.85 ? "freeze" : "bomb";
+  let type = "ton";
+
+  if (rand < 0.75) type = "ton";        // 75% chance
+  else if (rand < 0.90) type = "freeze"; // 15% chance
+  else type = "bomb";                   // 10% chance
+
   const x = Math.random() * (canvas.width - 30) + 15;
   objects.push({ x, y: 0, type });
 }
 
 function updateObjects() {
-  objects.forEach(obj => obj.y += 5);
+  objects.forEach(obj => obj.y += 4);
   objects = objects.filter(obj => obj.y < canvas.height);
   drawObjects();
 }
@@ -47,13 +51,7 @@ canvas.addEventListener("click", (e) => {
         score++;
         document.getElementById("currentScore").innerText = `Score: ${score}`;
       } else if (obj.type === "freeze") {
-        clearInterval(gameInterval);
-        setTimeout(() => {
-          gameInterval = setInterval(() => {
-            spawnObject();
-            updateObjects();
-          }, 500);
-        }, 3000);
+        pauseGameForFreeze();
       } else if (obj.type === "bomb") {
         endGame();
         return;
@@ -64,21 +62,33 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
+function pauseGameForFreeze() {
+  clearInterval(spawnInterval);
+  clearInterval(gameInterval);
+  setTimeout(() => {
+    spawnInterval = setInterval(spawnObject, 1000);   // Slower spawn
+    gameInterval = setInterval(updateObjects, 50);
+  }, 3000);
+}
+
 function startGame() {
   score = 0;
   objects = [];
   document.getElementById("currentScore").innerText = "Score: 0";
+
   if (gameInterval) clearInterval(gameInterval);
-  gameInterval = setInterval(() => {
-    spawnObject();
-    updateObjects();
-  }, 500);
+  if (spawnInterval) clearInterval(spawnInterval);
+
+  spawnInterval = setInterval(spawnObject, 1000);   // Slower spawn
+  gameInterval = setInterval(updateObjects, 50);
 }
 
 function endGame() {
   clearInterval(gameInterval);
+  clearInterval(spawnInterval);
   alert("💥 You hit a bomb!");
   if (!telegramId) return alert("Telegram not connected");
+
   fetch(`${backendURL}/submit-score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -127,9 +137,9 @@ function fetchLeaderboard() {
     });
 }
 
-// Run on load
+// On load, only show data. Don't start game automatically
 window.onload = () => {
   fetchTotalScore();
   fetchLeaderboard();
-  startGame(); // Start game after loading
+  // Do NOT start game here
 };
