@@ -72,14 +72,21 @@ function endGame() {
   alert("💥 You hit a bomb!");
   if (!telegramId) return alert("Telegram not connected");
 
-  fetch(`${backendURL}/submit-score`, {
+  fetch(`${backendURL}/score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, score }),
-  }).then(res => res.json()).then(() => {
-    fetchTotalScore();
-    fetchLeaderboard();
-  });
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        fetchTotalScore();
+        fetchLeaderboard();
+      } else {
+        alert("Failed to save score");
+      }
+    })
+    .catch(() => alert("Error saving score"));
 }
 
 function saveWallet() {
@@ -91,17 +98,23 @@ function saveWallet() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, wallet }),
-  }).then(res => res.json()).then(data => {
-    alert(data.success ? "Wallet saved!" : "Failed to save");
-  });
+  })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.success ? "Wallet saved!" : "Failed to save");
+    })
+    .catch(() => alert("Error saving wallet"));
 }
 
 function fetchTotalScore() {
   if (!telegramId) return;
-  fetch(`${backendURL}/player/${telegramId}`)
+  fetch(`${backendURL}/my-score/${telegramId}`)
     .then(res => res.json())
     .then(data => {
       document.getElementById("totalScore").innerText = `Total Score: ${data.totalScore || 0}`;
+    })
+    .catch(() => {
+      document.getElementById("totalScore").innerText = "Total Score: 0";
     });
 }
 
