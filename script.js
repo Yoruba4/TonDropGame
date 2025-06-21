@@ -1,6 +1,7 @@
 const backendURL = "https://tondropgamebackend.onrender.com";
 let tg = window.Telegram.WebApp;
 let telegramId = tg?.initDataUnsafe?.user?.id || null;
+console.log("Telegram ID:", telegramId);
 let score = 0, gameInterval, objects = [];
 
 const canvas = document.getElementById("gameCanvas");
