@@ -11,15 +11,18 @@
   <div class="container">
     <h1>TonDrop Game</h1>
 
+    <!-- Wallet Input -->
     <div class="wallet-section">
       <input type="text" id="walletInput" placeholder="Enter your TON wallet" />
       <button onclick="saveWallet()">Save Wallet</button>
     </div>
 
+    <!-- Multiplier Status -->
     <div id="multiplierStatus" style="margin: 10px 0; color: #fff; background: #e91e63; padding: 8px; border-radius: 8px; display: none;">
       🔥 10× BOOST ACTIVE
     </div>
 
+    <!-- Game Area -->
     <div id="gameArea" class="game-area">
       <button id="startBtn" onclick="startGame()">Start Game</button>
       <canvas id="gameCanvas" width="300" height="400"></canvas>
@@ -27,17 +30,20 @@
       <p id="totalScore">Total Score: 0</p>
     </div>
 
+    <!-- Leaderboard -->
     <div class="leaderboard">
       <h3>Leaderboard</h3>
       <ul id="leaderboardList"></ul>
     </div>
 
+    <!-- Developer TON Wallet Address -->
     <div class="dev-wallet">
       <p><strong>Send 0.5 TON</strong> to boost score:</p>
       <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
     </div>
   </div>
 
+  <!-- Game Logic -->
   <script src="script.js"></script>
 </body>
 </html>
