@@ -1,8 +1,7 @@
 const backendURL = "https://tondropgamebackend.onrender.com";
 let tg = window.Telegram.WebApp;
 let telegramId = tg?.initDataUnsafe?.user?.id || null;
-let score = 0, gameInterval, objects = [];
-let multiplier = 1;
+let score = 0, gameInterval, objects = [], multiplierActive = false;
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -18,13 +17,12 @@ function drawObjects() {
 }
 
 function spawnObject() {
-  const rand = Math.random();
-  const type = rand < 0.7 ? 'ton' : rand < 0.85 ? 'freeze' : 'bomb';
+  const type = Math.random() < 0.7 ? 'ton' : (Math.random() < 0.5 ? 'bomb' : 'freeze');
   objects.push({ x: Math.random() * 280 + 10, y: 0, type });
 }
 
 function updateObjects() {
-  objects.forEach(obj => obj.y += 4);
+  objects.forEach(obj => obj.y += 2); // 🐢 slower falling speed
   objects = objects.filter(obj => obj.y < canvas.height);
   drawObjects();
 }
@@ -39,15 +37,13 @@ canvas.addEventListener("click", (e) => {
     const dist = Math.hypot(obj.x - clickX, obj.y - clickY);
     if (dist < 20) {
       if (obj.type === 'ton') {
-        score += 1 * multiplier;
+        let point = multiplierActive ? 10 : 1;
+        score += point;
         document.getElementById("currentScore").innerText = `Score: ${score}`;
       } else if (obj.type === 'freeze') {
         clearInterval(gameInterval);
         setTimeout(() => {
-          gameInterval = setInterval(() => {
-            spawnObject();
-            updateObjects();
-          }, 500);
+          gameInterval = setInterval(gameLoop, 800); // restore after freeze
         }, 3000);
       } else if (obj.type === 'bomb') {
         endGame();
@@ -63,10 +59,12 @@ function startGame() {
   score = 0;
   objects = [];
   document.getElementById("currentScore").innerText = "Score: 0";
-  gameInterval = setInterval(() => {
-    spawnObject();
-    updateObjects();
-  }, 500);
+  gameInterval = setInterval(gameLoop, 800); // 🐢 reduced frequency
+}
+
+function gameLoop() {
+  spawnObject();
+  updateObjects();
 }
 
 function endGame() {
@@ -78,7 +76,7 @@ function endGame() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, score }),
-  }).then(() => {
+  }).then(res => res.json()).then(() => {
     fetchTotalScore();
     fetchLeaderboard();
   });
@@ -104,13 +102,6 @@ function fetchTotalScore() {
     .then(res => res.json())
     .then(data => {
       document.getElementById("totalScore").innerText = `Total Score: ${data.totalScore || 0}`;
-      if (data.subscriptionActive) {
-        multiplier = 10;
-        document.getElementById("multiplierStatus").innerText = "🔥 10× BOOST ACTIVE";
-      } else {
-        multiplier = 1;
-        document.getElementById("multiplierStatus").innerText = "";
-      }
     });
 }
 
@@ -128,7 +119,26 @@ function fetchLeaderboard() {
     });
 }
 
+function fetchSubscriptionStatus() {
+  if (!telegramId) return;
+  fetch(`${backendURL}/subscription-status/${telegramId}`)
+    .then(res => res.json())
+    .then(data => {
+      multiplierActive = data.isActive;
+      const status = document.getElementById("multiplierStatus");
+      if (multiplierActive) {
+        status.style.display = "block";
+      } else {
+        status.style.display = "none";
+      }
+    })
+    .catch(() => {
+      document.getElementById("multiplierStatus").style.display = "none";
+    });
+}
+
 window.onload = () => {
   fetchTotalScore();
   fetchLeaderboard();
+  fetchSubscriptionStatus();
 };
