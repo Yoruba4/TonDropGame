@@ -1,8 +1,8 @@
 const backendURL = "https://tondropgamebackend.onrender.com";
 let tg = window.Telegram.WebApp;
 let telegramId = tg?.initDataUnsafe?.user?.id || null;
-
-let score = 0, gameInterval = null, spawnInterval = null, objects = [];
+let score = 0, gameInterval, objects = [];
+let multiplier = 1;
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -10,10 +10,7 @@ const ctx = canvas.getContext("2d");
 function drawObjects() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   objects.forEach(obj => {
-    ctx.fillStyle =
-      obj.type === "ton" ? "gold" :
-      obj.type === "bomb" ? "red" :
-      "lightblue";
+    ctx.fillStyle = obj.type === 'ton' ? 'gold' : obj.type === 'bomb' ? 'red' : 'lightblue';
     ctx.beginPath();
     ctx.arc(obj.x, obj.y, 15, 0, Math.PI * 2);
     ctx.fill();
@@ -22,14 +19,8 @@ function drawObjects() {
 
 function spawnObject() {
   const rand = Math.random();
-  let type = "ton";
-
-  if (rand < 0.75) type = "ton";        // 75% chance
-  else if (rand < 0.90) type = "freeze"; // 15% chance
-  else type = "bomb";                   // 10% chance
-
-  const x = Math.random() * (canvas.width - 30) + 15;
-  objects.push({ x, y: 0, type });
+  const type = rand < 0.7 ? 'ton' : rand < 0.85 ? 'freeze' : 'bomb';
+  objects.push({ x: Math.random() * 280 + 10, y: 0, type });
 }
 
 function updateObjects() {
@@ -47,12 +38,18 @@ canvas.addEventListener("click", (e) => {
     const obj = objects[i];
     const dist = Math.hypot(obj.x - clickX, obj.y - clickY);
     if (dist < 20) {
-      if (obj.type === "ton") {
-        score++;
+      if (obj.type === 'ton') {
+        score += 1 * multiplier;
         document.getElementById("currentScore").innerText = `Score: ${score}`;
-      } else if (obj.type === "freeze") {
-        pauseGameForFreeze();
-      } else if (obj.type === "bomb") {
+      } else if (obj.type === 'freeze') {
+        clearInterval(gameInterval);
+        setTimeout(() => {
+          gameInterval = setInterval(() => {
+            spawnObject();
+            updateObjects();
+          }, 500);
+        }, 3000);
+      } else if (obj.type === 'bomb') {
         endGame();
         return;
       }
@@ -62,30 +59,18 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-function pauseGameForFreeze() {
-  clearInterval(spawnInterval);
-  clearInterval(gameInterval);
-  setTimeout(() => {
-    spawnInterval = setInterval(spawnObject, 1000);   // Slower spawn
-    gameInterval = setInterval(updateObjects, 50);
-  }, 3000);
-}
-
 function startGame() {
   score = 0;
   objects = [];
   document.getElementById("currentScore").innerText = "Score: 0";
-
-  if (gameInterval) clearInterval(gameInterval);
-  if (spawnInterval) clearInterval(spawnInterval);
-
-  spawnInterval = setInterval(spawnObject, 1000);   // Slower spawn
-  gameInterval = setInterval(updateObjects, 50);
+  gameInterval = setInterval(() => {
+    spawnObject();
+    updateObjects();
+  }, 500);
 }
 
 function endGame() {
   clearInterval(gameInterval);
-  clearInterval(spawnInterval);
   alert("💥 You hit a bomb!");
   if (!telegramId) return alert("Telegram not connected");
 
@@ -93,24 +78,24 @@ function endGame() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, score }),
-  }).then(res => res.json())
-    .then(() => {
-      fetchTotalScore();
-      fetchLeaderboard();
-    });
+  }).then(() => {
+    fetchTotalScore();
+    fetchLeaderboard();
+  });
 }
 
 function saveWallet() {
   const wallet = document.getElementById("walletInput").value;
   if (!telegramId) return alert("Telegram not connected");
-  if (!wallet) return alert("Enter wallet address");
+  if (!wallet) return alert("Enter wallet");
 
   fetch(`${backendURL}/save-wallet`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, wallet }),
-  }).then(res => res.json())
-    .then(data => alert(data.success ? "Wallet saved!" : "Failed to save"));
+  }).then(res => res.json()).then(data => {
+    alert(data.success ? "Wallet saved!" : "Failed to save");
+  });
 }
 
 function fetchTotalScore() {
@@ -118,8 +103,14 @@ function fetchTotalScore() {
   fetch(`${backendURL}/player/${telegramId}`)
     .then(res => res.json())
     .then(data => {
-      document.getElementById("totalScore").innerText =
-        `Total Score: ${data.totalScore || 0}`;
+      document.getElementById("totalScore").innerText = `Total Score: ${data.totalScore || 0}`;
+      if (data.subscriptionActive) {
+        multiplier = 10;
+        document.getElementById("multiplierStatus").innerText = "🔥 10× BOOST ACTIVE";
+      } else {
+        multiplier = 1;
+        document.getElementById("multiplierStatus").innerText = "";
+      }
     });
 }
 
@@ -129,17 +120,15 @@ function fetchLeaderboard() {
     .then(data => {
       const list = document.getElementById("leaderboardList");
       list.innerHTML = "";
-      data.forEach(p => {
+      data.forEach(player => {
         const li = document.createElement("li");
-        li.innerText = `ID:${p.telegramId.slice(-5)} | Score:${p.totalScore}`;
+        li.innerText = `ID: ${player.telegramId.slice(-5)} | Score: ${player.totalScore}`;
         list.appendChild(li);
       });
     });
 }
 
-// On load, only show data. Don't start game automatically
 window.onload = () => {
   fetchTotalScore();
   fetchLeaderboard();
-  // Do NOT start game here
 };
