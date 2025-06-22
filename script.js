@@ -1,11 +1,47 @@
 const backendURL = "https://tondropgamebackend.onrender.com";
 let tg = window.Telegram.WebApp;
 let telegramId = tg?.initDataUnsafe?.user?.id || null;
-let score = 0, gameInterval, dropInterval, objects = [];
-let boostExpiresAt = null;
+let score = 0, gameInterval, objects = [], gameStarted = false;
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
+// BOOST STATUS UI
+function checkMultiplier() {
+  if (!telegramId) return;
+
+  fetch(`${backendURL}/player/${telegramId}`)
+    .then(res => res.json())
+    .then(data => {
+      const active = data.subscriptionExpiresAt && new Date(data.subscriptionExpiresAt) > Date.now();
+      const status = document.getElementById("multiplierStatus");
+      status.style.display = active ? "block" : "none";
+    });
+}
+
+// BOOST TRIGGER
+function triggerBoost() {
+  if (!telegramId) return alert("Telegram not connected");
+
+  fetch(`${backendURL}/subscribe`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert("✅ Boost activated for 72 hours!");
+        checkMultiplier();
+      } else {
+        alert("❌ Boost failed. Try again later.");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("❌ Error activating boost.");
+    });
+}
 
 function drawObjects() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -19,9 +55,7 @@ function drawObjects() {
 
 function spawnObject() {
   const rand = Math.random();
-  let type = 'ton';
-  if (rand < 0.15) type = 'freeze';
-  else if (rand < 0.25) type = 'bomb';
+  const type = rand < 0.7 ? 'ton' : rand < 0.85 ? 'freeze' : 'bomb';
   objects.push({ x: Math.random() * 280 + 10, y: 0, type });
 }
 
@@ -41,15 +75,17 @@ canvas.addEventListener("click", (e) => {
     const dist = Math.hypot(obj.x - clickX, obj.y - clickY);
     if (dist < 20) {
       if (obj.type === 'ton') {
-        let points = isBoostActive() ? 10 : 1;
-        score += points;
-        document.getElementById("currentScore").innerText = `Score: ${score}`;
+        fetch(`${backendURL}/player/${telegramId}`)
+          .then(res => res.json())
+          .then(data => {
+            const active = data.subscriptionExpiresAt && new Date(data.subscriptionExpiresAt) > Date.now();
+            score += active ? 10 : 1;
+            document.getElementById("currentScore").innerText = `Score: ${score}`;
+          });
       } else if (obj.type === 'freeze') {
         clearInterval(gameInterval);
-        clearInterval(dropInterval);
         setTimeout(() => {
-          gameInterval = setInterval(updateObjects, 40);
-          dropInterval = setInterval(spawnObject, 500); // RESTART drops
+          gameInterval = setInterval(gameLoop, 400);
         }, 3000);
       } else if (obj.type === 'bomb') {
         endGame();
@@ -61,28 +97,37 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
+function gameLoop() {
+  if (Math.random() < 0.8 && objects.length < 1) {
+    spawnObject();
+  }
+  updateObjects();
+}
+
 function startGame() {
+  if (!telegramId) return alert("Telegram not connected");
   score = 0;
   objects = [];
+  gameStarted = true;
   document.getElementById("currentScore").innerText = "Score: 0";
-  gameInterval = setInterval(updateObjects, 40);
-  dropInterval = setInterval(spawnObject, 500); // faster drops
+  gameInterval = setInterval(gameLoop, 400);
 }
 
 function endGame() {
   clearInterval(gameInterval);
-  clearInterval(dropInterval);
+  gameStarted = false;
   alert("💥 You hit a bomb!");
-  if (!telegramId) return alert("Telegram not connected");
 
   fetch(`${backendURL}/submit-score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, score }),
-  }).then(() => {
-    fetchTotalScore();
-    fetchLeaderboard();
-  });
+  })
+    .then(res => res.json())
+    .then(() => {
+      fetchTotalScore();
+      fetchLeaderboard();
+    });
 }
 
 function saveWallet() {
@@ -94,9 +139,11 @@ function saveWallet() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, wallet }),
-  }).then(res => res.json()).then(data => {
-    alert(data.success ? "Wallet saved!" : "Failed to save");
-  });
+  })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.success ? "Wallet saved!" : "Failed to save");
+    });
 }
 
 function fetchTotalScore() {
@@ -122,63 +169,8 @@ function fetchLeaderboard() {
     });
 }
 
-function isBoostActive() {
-  return boostExpiresAt && new Date(boostExpiresAt) > new Date();
-}
-
-function checkBoostStatus() {
-  if (!telegramId) return;
-  fetch(`${backendURL}/player/${telegramId}`)
-    .then(res => res.json())
-    .then(data => {
-      boostExpiresAt = data.subscriptionExpiresAt;
-      const statusEl = document.getElementById("multiplierStatus");
-      if (isBoostActive()) {
-        statusEl.style.display = "block";
-        startBoostCountdown(new Date(boostExpiresAt));
-      } else {
-        statusEl.style.display = "none";
-      }
-    });
-}
-
-function startBoostCountdown(endTime) {
-  const statusEl = document.getElementById("multiplierStatus");
-  const interval = setInterval(() => {
-    const now = new Date();
-    const diff = endTime - now;
-    if (diff <= 0) {
-      statusEl.style.display = "none";
-      clearInterval(interval);
-      return;
-    }
-    const mins = Math.floor(diff / 60000);
-    const secs = Math.floor((diff % 60000) / 1000);
-    statusEl.innerText = `🔥 10× BOOST ACTIVE – ${mins}m ${secs}s left`;
-  }, 1000);
-}
-
-function triggerBoostManually() {
-  if (!telegramId) return alert("Telegram not connected");
-  alert("Send 0.5 TON to this wallet to activate BOOST:\n\nUQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY\n\nYour boost will be active for 72 hours.");
-
-  fetch(`${backendURL}/subscribe`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId }),
-  }).then(() => {
-    checkBoostStatus();
-  });
-}
-
 window.onload = () => {
   fetchTotalScore();
   fetchLeaderboard();
-  checkBoostStatus();
-
-  // Bind boost button if it exists
-  const boostBtn = document.getElementById("boostBtn");
-  if (boostBtn) {
-    boostBtn.addEventListener("click", triggerBoostManually);
-  }
+  checkMultiplier();
 };
