@@ -1,47 +1,10 @@
 const backendURL = "https://tondropgamebackend.onrender.com";
 let tg = window.Telegram.WebApp;
 let telegramId = tg?.initDataUnsafe?.user?.id || null;
-let score = 0, gameInterval, objects = [], gameStarted = false;
+let score = 0, gameInterval, objects = [];
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
-// BOOST STATUS UI
-function checkMultiplier() {
-  if (!telegramId) return;
-
-  fetch(`${backendURL}/player/${telegramId}`)
-    .then(res => res.json())
-    .then(data => {
-      const active = data.subscriptionExpiresAt && new Date(data.subscriptionExpiresAt) > Date.now();
-      const status = document.getElementById("multiplierStatus");
-      status.style.display = active ? "block" : "none";
-    });
-}
-
-// BOOST TRIGGER
-function triggerBoost() {
-  if (!telegramId) return alert("Telegram not connected");
-
-  fetch(`${backendURL}/subscribe`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId }),
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        alert("✅ Boost activated for 72 hours!");
-        checkMultiplier();
-      } else {
-        alert("❌ Boost failed. Try again later.");
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert("❌ Error activating boost.");
-    });
-}
 
 function drawObjects() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -54,13 +17,17 @@ function drawObjects() {
 }
 
 function spawnObject() {
+  // 70% ton, 20% bomb, 10% freeze
   const rand = Math.random();
-  const type = rand < 0.7 ? 'ton' : rand < 0.85 ? 'freeze' : 'bomb';
+  let type = 'ton';
+  if (rand > 0.7 && rand <= 0.9) type = 'bomb';
+  else if (rand > 0.9) type = 'freeze';
+
   objects.push({ x: Math.random() * 280 + 10, y: 0, type });
 }
 
 function updateObjects() {
-  objects.forEach(obj => obj.y += 4);
+  objects.forEach(obj => obj.y += 5); // slightly faster drop
   objects = objects.filter(obj => obj.y < canvas.height);
   drawObjects();
 }
@@ -75,17 +42,15 @@ canvas.addEventListener("click", (e) => {
     const dist = Math.hypot(obj.x - clickX, obj.y - clickY);
     if (dist < 20) {
       if (obj.type === 'ton') {
-        fetch(`${backendURL}/player/${telegramId}`)
-          .then(res => res.json())
-          .then(data => {
-            const active = data.subscriptionExpiresAt && new Date(data.subscriptionExpiresAt) > Date.now();
-            score += active ? 10 : 1;
-            document.getElementById("currentScore").innerText = `Score: ${score}`;
-          });
+        score += 1;
+        document.getElementById("currentScore").innerText = `Score: ${score}`;
       } else if (obj.type === 'freeze') {
         clearInterval(gameInterval);
         setTimeout(() => {
-          gameInterval = setInterval(gameLoop, 400);
+          gameInterval = setInterval(() => {
+            spawnObject();
+            updateObjects();
+          }, 300); // continue after 3 seconds
         }, 3000);
       } else if (obj.type === 'bomb') {
         endGame();
@@ -97,37 +62,30 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-function gameLoop() {
-  if (Math.random() < 0.8 && objects.length < 1) {
-    spawnObject();
-  }
-  updateObjects();
-}
-
 function startGame() {
-  if (!telegramId) return alert("Telegram not connected");
   score = 0;
   objects = [];
-  gameStarted = true;
   document.getElementById("currentScore").innerText = "Score: 0";
-  gameInterval = setInterval(gameLoop, 400);
+
+  gameInterval = setInterval(() => {
+    spawnObject();
+    updateObjects();
+  }, 300); // drop interval - faster but still one at a time
 }
 
 function endGame() {
   clearInterval(gameInterval);
-  gameStarted = false;
   alert("💥 You hit a bomb!");
+  if (!telegramId) return alert("Telegram not connected");
 
   fetch(`${backendURL}/submit-score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, score }),
-  })
-    .then(res => res.json())
-    .then(() => {
-      fetchTotalScore();
-      fetchLeaderboard();
-    });
+  }).then(res => res.json()).then(() => {
+    fetchTotalScore();
+    fetchLeaderboard();
+  });
 }
 
 function saveWallet() {
@@ -139,11 +97,9 @@ function saveWallet() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, wallet }),
-  })
-    .then(res => res.json())
-    .then(data => {
-      alert(data.success ? "Wallet saved!" : "Failed to save");
-    });
+  }).then(res => res.json()).then(data => {
+    alert(data.success ? "Wallet saved!" : "Failed to save");
+  });
 }
 
 function fetchTotalScore() {
@@ -172,5 +128,4 @@ function fetchLeaderboard() {
 window.onload = () => {
   fetchTotalScore();
   fetchLeaderboard();
-  checkMultiplier();
 };
