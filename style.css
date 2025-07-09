@@ -1,57 +1,51 @@
 body {
   font-family: sans-serif;
-  text-align: center;
-  background: #f0f8ff;
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  touch-action: none;
+  background-color: #f3f3f3;
 }
 
 .container {
-  max-width: 400px;
-  margin: auto;
-  padding: 10px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.left-panel, .right-panel {
+  flex: 1 1 45%;
+  min-width: 300px;
+  margin-bottom: 20px;
 }
 
 .game-area {
-  margin-top: 20px;
-}
-
-canvas {
-  border: 2px solid #333;
-  background-color: #fff;
-  user-select: none;
-  touch-action: none;
-  -webkit-user-drag: none;
-  -webkit-touch-callout: none;
-  image-rendering: pixelated;
-  max-width: 100%;
-  height: auto;
-}
-
-input {
-  padding: 8px;
-  margin: 5px;
-  width: 80%;
-  max-width: 300px;
-}
-
-button {
-  padding: 8px 15px;
-  margin: 5px;
-  cursor: pointer;
-}
-
-.leaderboard {
-  margin-top: 20px;
-  background: #fff;
-  padding: 10px;
-  border-radius: 8px;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-ul#leaderboardList {
+canvas {
+  display: block;
+  margin: 0 auto;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+input, button {
+  margin: 5px 0;
+  padding: 10px;
+  width: 100%;
+  font-size: 16px;
+}
+
+ul {
   list-style: none;
-  padding: 0;
+  padding-left: 0;
+}
+
+li {
+  margin: 5px 0;
 }
