@@ -6,16 +6,6 @@
   <title>TonDrop</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body { font-family: sans-serif; background: #121212; color: white; text-align: center; }
-    .container { padding: 20px; max-width: 400px; margin: auto; }
-    #gameCanvas { background: #333; margin-top: 10px; }
-    .leaderboard { margin-top: 20px; }
-    ul { list-style: none; padding: 0; }
-    li { margin-bottom: 5px; }
-    .tab { margin: 5px; padding: 5px 10px; cursor: pointer; border-radius: 5px; display: inline-block; background: #444; }
-    .tab.active { background: #2196f3; }
-  </style>
 </head>
 <body>
   <div class="container">
@@ -27,38 +17,32 @@
       <button onclick="saveWallet()">Save Wallet</button>
     </div>
 
-    <!-- Multiplier Status (can be removed if unused) -->
-    <div id="multiplierStatus" style="margin: 10px 0; display: none;">
-      🔥 BOOST ACTIVE
+    <!-- Referral Input -->
+    <div class="referral-section">
+      <input type="text" id="referralInput" placeholder="Enter inviter username (optional)" />
+      <button onclick="submitReferral()">Submit Referral</button>
     </div>
 
     <!-- Game Area -->
-    <div id="gameArea">
+    <div id="gameArea" class="game-area">
       <button id="startBtn" onclick="startGame()">Start Game</button>
       <canvas id="gameCanvas" width="300" height="400"></canvas>
       <p id="currentScore">Score: 0</p>
-      <p id="totalScore">Total Score: 0</p>
-      <p id="competitionScore">Competition Score: 0</p>
-      <p id="referralInfo">Referrals: 0</p>
     </div>
 
-    <!-- Leaderboard Tabs -->
+    <button onclick="submitScore()">Submit Score</button>
+
+    <!-- Leaderboard -->
     <div class="leaderboard">
-      <div>
-        <span class="tab active" id="globalTab" onclick="switchLeaderboard('global')">🌍 Global</span>
-        <span class="tab" id="compTab" onclick="switchLeaderboard('competition')">🏆 Competition</span>
-      </div>
-      <h3 id="leaderboardTitle">Leaderboard</h3>
+      <h3>Leaderboard</h3>
+      <button id="toggleLeaderboard">Show Competition Leaderboard</button>
       <ul id="leaderboardList"></ul>
     </div>
 
-    <!-- Developer Wallet Address -->
-    <div class="dev-wallet" style="margin-top: 20px;">
-      <p><strong>Send 0.5 TON</strong> to boost Airdrop Points by 5x</p>
-      <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
-    </div>
-  </div>
+    <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
+    <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
 
-  <script src="script.js"></script>
+    <script src="script.js"></script>
+  </div>
 </body>
 </html>
