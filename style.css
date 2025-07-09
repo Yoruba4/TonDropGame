@@ -1,49 +1,57 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #101820;
-  color: #fff;
+  font-family: sans-serif;
   text-align: center;
-  padding: 10px;
+  background: #f0f8ff;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  touch-action: none;
 }
 
 .container {
   max-width: 400px;
   margin: auto;
-  background: #1c1c1c;
-  border-radius: 10px;
-  padding: 15px;
-}
-
-input, button {
   padding: 10px;
-  margin: 5px;
-  border-radius: 6px;
-  border: none;
 }
 
-button {
-  background: #00bcd4;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
+.game-area {
+  margin-top: 20px;
 }
 
 canvas {
-  background: #fff;
-  display: block;
-  margin: 10px auto;
-  border-radius: 10px;
+  border: 2px solid #333;
+  background-color: #fff;
+  user-select: none;
+  touch-action: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  image-rendering: pixelated;
+  max-width: 100%;
+  height: auto;
+}
+
+input {
+  padding: 8px;
+  margin: 5px;
+  width: 80%;
+  max-width: 300px;
+}
+
+button {
+  padding: 8px 15px;
+  margin: 5px;
+  cursor: pointer;
 }
 
 .leaderboard {
   margin-top: 20px;
-  text-align: left;
+  background: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-#multiplierStatus {
-  background: #e91e63;
-  color: #fff;
-  padding: 6px;
-  border-radius: 8px;
-  margin: 10px 0;
+ul#leaderboardList {
+  list-style: none;
+  padding: 0;
 }
