@@ -6,39 +6,71 @@
   <title>TonDrop Game</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 10px;
+      background: #e9f4ff;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: auto;
+      text-align: center;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 90%;
+      font-size: 16px;
+    }
+
+    canvas {
+      border: 2px solid black;
+      margin: 10px 0;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .leaderboard {
+      margin-top: 20px;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    #leaderboardList {
+      list-style: none;
+      padding-left: 0;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h2>TonDrop Game</h2>
 
-    <!-- Wallet Input -->
     <input type="text" id="walletInput" placeholder="Enter your TON wallet" />
     <button onclick="saveWallet()">Save Wallet</button>
 
-    <!-- Referral Input -->
     <input type="text" id="referralInput" placeholder="Enter inviter username (optional)" />
     <button onclick="submitReferral()">Submit Referral</button>
 
-    <!-- Game Section -->
     <button id="startBtn" onclick="startGame()">Start Game</button>
     <canvas id="gameCanvas" width="300" height="400"></canvas>
 
-    <!-- Score Displays -->
     <p id="currentScore">Score: 0</p>
     <p id="totalScore">Total Score: 0</p>
     <p id="competitionScore">Competition Score: 0</p>
 
-    <!-- Leaderboard Section -->
     <div class="leaderboard">
       <button id="toggleLeaderboard" onclick="switchLeaderboard()">Show Competition Leaderboard</button>
       <ul id="leaderboardList"></ul>
     </div>
 
-    <!-- Airdrop Info -->
-    <div>
-      <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
-      <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
-    </div>
+    <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
+    <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
   </div>
 
   <script src="script.js"></script>
