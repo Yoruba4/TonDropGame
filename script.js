@@ -1,11 +1,11 @@
-const API = "https://tondropgamebackend.onrender.com";
-
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const currentScoreEl = document.getElementById("currentScore");
 const totalScoreEl = document.getElementById("totalScore");
 const competitionScoreEl = document.getElementById("competitionScore");
 const leaderboardList = document.getElementById("leaderboardList");
+const startBtn = document.getElementById("startBtn");
+const API = ""; // Leave empty if frontend and backend are same domain
 
 let score = 0;
 let gameObjects = [];
@@ -20,10 +20,10 @@ let user = {
   wallet: null,
 };
 
+// Local Storage
 function persistUser() {
   localStorage.setItem("tonDropUser", JSON.stringify(user));
 }
-
 function loadUser() {
   const saved = localStorage.getItem("tonDropUser");
   if (saved) {
@@ -34,6 +34,7 @@ function loadUser() {
   }
 }
 
+// Save Wallet
 function saveWallet() {
   const wallet = document.getElementById("walletInput").value;
   const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
@@ -52,16 +53,17 @@ function saveWallet() {
     .then((data) => {
       if (data.success) {
         persistUser();
-        alert("Wallet saved. You can start playing.");
-        document.getElementById("startBtn").disabled = false;
+        alert("✅ Wallet saved. You can now play!");
+        startBtn.disabled = false;
         fetchPlayerScore();
         fetchLeaderboards();
       } else {
-        alert("Failed to save wallet");
+        alert("❌ Wallet not saved.");
       }
     });
 }
 
+// Submit Referral
 function submitReferral() {
   const referrer = document.getElementById("referralInput").value;
   if (!referrer || !user.telegramId || !user.username) return;
@@ -78,14 +80,15 @@ function submitReferral() {
     .then((res) => res.json())
     .then((data) => {
       if (data.success) {
-        alert("Referral submitted successfully.");
+        alert("✅ Referral submitted.");
         document.getElementById("referralInput").disabled = true;
       } else {
-        alert(data.message || "Referral failed.");
+        alert(data.message || "❌ Referral failed.");
       }
     });
 }
 
+// Game Logic
 function startGame() {
   if (!user.wallet) {
     alert("Please save your wallet first.");
@@ -107,7 +110,7 @@ function stopGame() {
 }
 
 function submitScore() {
-  if (scoreSubmitted || score <= 0) return;
+  if (scoreSubmitted || score <= 0 || !user.telegramId || !user.wallet) return;
   scoreSubmitted = true;
 
   fetch(`${API}/submit-score`, {
@@ -127,7 +130,7 @@ function submitScore() {
 function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!isFrozen) {
-    for (const obj of gameObjects) obj.y += 1.5;
+    for (const obj of gameObjects) obj.y += 2;
   }
   gameObjects = gameObjects.filter((obj) => obj.y < canvas.height);
   for (const obj of gameObjects) {
@@ -171,6 +174,7 @@ canvas.addEventListener("click", (e) => {
     const obj = gameObjects[i];
     const dx = obj.x - x;
     const dy = obj.y - y;
+
     if (dx * dx + dy * dy < obj.r * obj.r) {
       if (obj.type === "normal") {
         score++;
@@ -179,16 +183,18 @@ canvas.addEventListener("click", (e) => {
         isFrozen = true;
         setTimeout(() => (isFrozen = false), 3000);
       } else if (obj.type === "bomb") {
-        alert("Game Over! You hit a bomb.");
-        stopGame();
-        return;
+        isFrozen = true;
+        alert("💥 You hit a bomb! Frozen for 30 seconds.");
+        setTimeout(() => (isFrozen = false), 30000);
       }
+
       gameObjects.splice(i, 1);
       break;
     }
   }
 });
 
+// Leaderboard
 function fetchPlayerScore() {
   fetch(`${API}/player/${user.telegramId}`)
     .then((res) => res.json())
@@ -227,21 +233,20 @@ function switchLeaderboard() {
   fetchLeaderboards();
 }
 
+// Load on Start
 window.onload = () => {
   loadUser();
 
-  if (!user.telegramId) {
+  if (!user.telegramId && window.Telegram.WebApp.initDataUnsafe.user) {
     const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-    if (tgUser) {
-      user.telegramId = tgUser.id.toString();
-      user.username = tgUser.username || "anon" + tgUser.id;
-      persistUser();
-    }
+    user.telegramId = tgUser.id.toString();
+    user.username = tgUser.username || "anon" + tgUser.id;
+    persistUser();
   }
 
   if (user.wallet) {
     document.getElementById("walletInput").value = user.wallet;
-    document.getElementById("startBtn").disabled = false;
+    startBtn.disabled = false;
     fetchPlayerScore();
     fetchLeaderboards();
   }
