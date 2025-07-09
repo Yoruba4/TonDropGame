@@ -1,168 +1,25 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const scoreDisplay = document.getElementById("currentScore");
-const totalScoreDisplay = document.getElementById("totalScore");
-const compScoreDisplay = document.getElementById("competitionScore");
-const referralInfo = document.getElementById("referralInfo");
+// script.js - Updated Game Logic with Wallet Memory & Referrals
 
-let score = 0;
-let interval;
-let telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
-let telegramId = telegramUser?.id?.toString();
-let username = telegramUser?.username || "Unknown";
-let walletAddress = "";
-let balls = [];
-let freezeMode = false;
+let telegramId = null; let username = null; let walletAddress = localStorage.getItem("wallet") || ""; document.addEventListener("DOMContentLoaded", () => { Telegram.WebApp.ready(); telegramId = Telegram.WebApp.initDataUnsafe.user.id.toString(); username = Telegram.WebApp.initDataUnsafe.user.username || "anon";
 
-// Save wallet
-async function saveWallet() {
-  const input = document.getElementById("walletInput");
-  const wallet = input.value.trim();
-  if (!wallet) return alert("Enter your TON wallet");
-  walletAddress = wallet;
+document.getElementById("walletInput").value = walletAddress; if (walletAddress) fetchPlayerData(); registerReferral(); });
 
-  const res = await fetch("https://tondropgamebackend.onrender.com/save-wallet", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId, wallet, username }),
-  });
-  const data = await res.json();
-  if (data.success) {
-    alert("Wallet saved!");
-    fetchPlayerData();
-  } else {
-    alert("Failed to save wallet.");
-  }
-}
+function saveWallet() { const input = document.getElementById("walletInput"); const wallet = input.value.trim(); if (!wallet) return alert("Enter your TON wallet");
 
-// Load player data
-async function fetchPlayerData() {
-  try {
-    const res = await fetch(`https://tondropgamebackend.onrender.com/player/${telegramId}`);
-    const data = await res.json();
-    totalScoreDisplay.innerText = "Total Score: " + (data.totalScore || 0);
-    compScoreDisplay.innerText = "Competition Score: " + (data.competitionScore || 0);
-    referralInfo.innerText = "Referrals: " + (data.referrals || 0);
-  } catch {
-    console.log("Failed to fetch player data.");
-  }
-}
+walletAddress = wallet; localStorage.setItem("wallet", wallet);
 
-// Submit score
-async function submitScore() {
-  if (!walletAddress) return;
-  await fetch("https://tondropgamebackend.onrender.com/submit-score", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId, username, score }),
-  });
-  fetchPlayerData();
-}
+fetch("https://tondropgamebackend.onrender.com/save-wallet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telegramId, wallet, username }), }) .then((res) => res.json()) .then((data) => { if (data.success) { alert("Wallet saved!"); fetchPlayerData(); } else { alert("Failed to save wallet."); } }); }
 
-// Game start
-function startGame() {
-  if (!walletAddress) {
-    alert("Save your wallet first!");
-    return;
-  }
+// Referral tracking const urlParams = new URLSearchParams(window.location.search); const referrer = urlParams.get("ref"); function registerReferral() { if (!referrer || telegramId === referrer) return; fetch("https://tondropgamebackend.onrender.com/refer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telegramId, username, referrer }), }); }
 
-  score = 0;
-  scoreDisplay.innerText = "Score: 0";
-  balls = [];
-  clearInterval(interval);
-  interval = setInterval(updateGame, 500);
-  spawnBall();
-}
+// Game setup const canvas = document.getElementById("gameCanvas"); const ctx = canvas.getContext("2d"); let score = 0; let isPlaying = false; let objects = []; let gameLoop;
 
-// Ball object
-function spawnBall() {
-  const types = ["normal", "freeze", "bomb"];
-  const type = Math.random() < 0.8 ? "normal" : Math.random() < 0.5 ? "freeze" : "bomb";
-  balls.push({ x: Math.random() * 280, y: 0, type });
-}
+function startGame() { if (!walletAddress) return alert("Please save your wallet first."); score = 0; isPlaying = true; objects = []; spawnObject(); gameLoop = setInterval(updateGame, 40); }
 
-function updateGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function spawnObject() { const types = ["ball", "red", "freeze"]; const chance = Math.random(); let type = "ball"; if (chance < 0.1) type = "red"; // 10% red else if (chance < 0.15) type = "freeze"; // 5% freeze
 
-  if (Math.random() < 0.4) spawnBall();
+const obj = { x: Math.random() * 260, y: -20, type, }; objects.push(obj); if (isPlaying) setTimeout(spawnObject, 1000); // drop every 1s }
 
-  balls.forEach((ball, i) => {
-    ball.y += freezeMode ? 0.5 : 2;
-    if (ball.y > 400) balls.splice(i, 1);
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 10, 0, Math.PI * 2);
-    ctx.fillStyle = ball.type === "freeze" ? "blue" : ball.type === "bomb" ? "red" : "lime";
-    ctx.fill();
-    ctx.closePath();
-  });
-}
+function updateGame() { ctx.clearRect(0, 0, 300, 400); objects.forEach((obj) => { obj.y +=
 
-canvas.addEventListener("click", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
 
-  balls.forEach((ball, i) => {
-    const dx = ball.x - x;
-    const dy = ball.y - y;
-    if (Math.sqrt(dx * dx + dy * dy) < 10) {
-      if (ball.type === "freeze") {
-        freezeMode = true;
-        setTimeout(() => (freezeMode = false), 3000);
-      } else if (ball.type === "bomb") {
-        alert("Game Over!");
-        clearInterval(interval);
-        submitScore();
-      } else {
-        score++;
-        scoreDisplay.innerText = "Score: " + score;
-      }
-      balls.splice(i, 1);
-    }
-  });
-});
-
-// Leaderboard logic
-async function loadLeaderboard(type = "global") {
-  const url =
-    type === "competition"
-      ? "https://tondropgamebackend.onrender.com/competition-leaderboard"
-      : "https://tondropgamebackend.onrender.com/leaderboard";
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    const list = document.getElementById("leaderboardList");
-    const title = document.getElementById("leaderboardTitle");
-    list.innerHTML = "";
-    title.innerText = type === "competition" ? "🏆 Competition Leaderboard" : "🌍 Global Leaderboard";
-
-    data.forEach((player, i) => {
-      const li = document.createElement("li");
-      li.innerText = `${i + 1}. @${player.username || "unknown"} — ${
-        type === "competition" ? player.competitionScore : player.totalScore
-      } pts`;
-      list.appendChild(li);
-    });
-  } catch {
-    console.log("Failed to load leaderboard.");
-  }
-}
-
-// Tab switch
-function switchLeaderboard(type) {
-  document.getElementById("globalTab").classList.remove("active");
-  document.getElementById("compTab").classList.remove("active");
-
-  if (type === "competition") {
-    document.getElementById("compTab").classList.add("active");
-  } else {
-    document.getElementById("globalTab").classList.add("active");
-  }
-
-  loadLeaderboard(type);
-}
-
-// Initial setup
-fetchPlayerData();
-loadLeaderboard("global");
