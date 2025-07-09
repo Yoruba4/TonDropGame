@@ -41,7 +41,7 @@ function saveWallet() {
   if (!wallet || !tgUser) return;
 
   user.telegramId = tgUser.id.toString();
-  user.username = tgUser.username || `anon${tgUser.id}`;
+  user.username = tgUser.username || "anon" + tgUser.id;
   user.wallet = wallet;
 
   fetch("/save-wallet", {
@@ -80,7 +80,7 @@ function submitReferral() {
     .then((res) => res.json())
     .then((data) => {
       if (data.success) {
-        alert("Referral submitted!");
+        alert("Referral submitted successfully.");
         document.getElementById("referralInput").disabled = true;
       } else {
         alert(data.message || "Referral failed.");
@@ -104,10 +104,8 @@ function startGame() {
   gameInterval = setInterval(updateGame, 30);
 }
 
-// Stop game
 function stopGame() {
   clearInterval(gameInterval);
-  gameInterval = null;
   submitScore();
 }
 
@@ -125,20 +123,18 @@ function submitScore() {
       score,
     }),
   }).then(() => {
-    fetchLeaderboards();
     fetchPlayerScore();
+    fetchLeaderboards();
   });
 }
 
-// Update game loop
+// Update canvas
 function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!isFrozen) {
     for (const obj of gameObjects) obj.y += 1.5;
   }
-
   gameObjects = gameObjects.filter((obj) => obj.y < canvas.height);
-
   for (const obj of gameObjects) {
     ctx.fillStyle = obj.color;
     ctx.beginPath();
@@ -169,10 +165,10 @@ function spawnObject() {
     color,
   });
 
-  if (gameInterval) setTimeout(spawnObject, 700); // drop speed
+  if (gameInterval) setTimeout(spawnObject, 700);
 }
 
-// Click to collect
+// Click detection
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -190,18 +186,17 @@ canvas.addEventListener("click", (e) => {
         isFrozen = true;
         setTimeout(() => (isFrozen = false), 3000);
       } else if (obj.type === "bomb") {
-        alert("💣 Game Over! You hit a bomb.");
+        alert("Game Over! You hit a bomb.");
         stopGame();
         return;
       }
-
       gameObjects.splice(i, 1);
       break;
     }
   }
 });
 
-// Fetch player stats
+// Get player score
 function fetchPlayerScore() {
   fetch(`/player/${user.telegramId}`)
     .then((res) => res.json())
@@ -232,7 +227,6 @@ function updateLeaderboard(players) {
   });
 }
 
-// Switch leaderboard
 function switchLeaderboard() {
   currentLeaderboard = currentLeaderboard === "global" ? "competition" : "global";
   document.getElementById("toggleLeaderboard").textContent =
@@ -242,14 +236,14 @@ function switchLeaderboard() {
   fetchLeaderboards();
 }
 
-// Initialize on load
+// On load
 window.onload = () => {
   loadUser();
 
   const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
   if (tgUser && !user.telegramId) {
     user.telegramId = tgUser.id.toString();
-    user.username = tgUser.username || `anon${tgUser.id}`;
+    user.username = tgUser.username || "anon" + tgUser.id;
     persistUser();
   }
 
