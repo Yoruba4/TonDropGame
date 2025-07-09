@@ -6,12 +6,11 @@ const competitionScoreEl = document.getElementById("competitionScore");
 const leaderboardList = document.getElementById("leaderboardList");
 
 let score = 0;
-let totalScore = 0;
-let competitionScore = 0;
 let gameObjects = [];
 let isFrozen = false;
 let scoreSubmitted = false;
-let currentLeaderboard = "global"; // or "competition"
+let gameInterval = null;
+let currentLeaderboard = "global";
 
 let user = {
   telegramId: null,
@@ -19,12 +18,28 @@ let user = {
   wallet: null,
 };
 
-// Save Wallet
+// 🧠 Save to LocalStorage
+function persistUser() {
+  localStorage.setItem("tonDropUser", JSON.stringify(user));
+}
+
+// 🧠 Load from LocalStorage
+function loadUser() {
+  const saved = localStorage.getItem("tonDropUser");
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    user.telegramId = parsed.telegramId;
+    user.username = parsed.username;
+    user.wallet = parsed.wallet;
+  }
+}
+
+// 🚀 Save Wallet
 function saveWallet() {
   const wallet = document.getElementById("walletInput").value;
-  if (!wallet || !window.Telegram.WebApp.initDataUnsafe.user) return;
-
   const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+  if (!wallet || !tgUser) return;
+
   user.telegramId = tgUser.id.toString();
   user.username = tgUser.username || "anon" + tgUser.id;
   user.wallet = wallet;
@@ -32,24 +47,23 @@ function saveWallet() {
   fetch("/save-wallet", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: user.telegramId,
-      username: user.username,
-      wallet,
-    }),
+    body: JSON.stringify(user),
   })
     .then((res) => res.json())
     .then((data) => {
       if (data.success) {
-        alert("Wallet saved. You can start playing!");
+        persistUser();
+        alert("Wallet saved. You can start playing.");
         document.getElementById("startBtn").disabled = false;
         fetchPlayerScore();
         fetchLeaderboards();
+      } else {
+        alert("Failed to save wallet");
       }
     });
 }
 
-// Referral Submit
+// 🧠 Referral
 function submitReferral() {
   const referrer = document.getElementById("referralInput").value;
   if (!referrer || !user.telegramId || !user.username) return;
@@ -62,27 +76,29 @@ function submitReferral() {
       username: user.username,
       referrer,
     }),
-  }).then((res) => res.json())
+  })
+    .then((res) => res.json())
     .then((data) => {
       if (data.success) {
         alert("Referral submitted successfully.");
         document.getElementById("referralInput").disabled = true;
       } else {
-        alert(data.message || "Referral failed or already submitted.");
+        alert(data.message || "Referral failed.");
       }
     });
 }
 
-// Game Logic
+// 🕹️ Game Logic
 function startGame() {
   if (!user.wallet) {
-    alert("Save your wallet first!");
+    alert("Please save your wallet first.");
     return;
   }
+
   score = 0;
   scoreSubmitted = false;
-  gameObjects = [];
   currentScoreEl.textContent = "Score: 0";
+  gameObjects = [];
 
   spawnObject();
   gameInterval = setInterval(updateGame, 30);
@@ -105,7 +121,10 @@ function submitScore() {
       username: user.username,
       score,
     }),
-  }).then(() => fetchLeaderboards());
+  }).then(() => {
+    fetchLeaderboards();
+    fetchPlayerScore();
+  });
 }
 
 function updateGame() {
@@ -113,9 +132,7 @@ function updateGame() {
   if (!isFrozen) {
     for (const obj of gameObjects) obj.y += 1.5;
   }
-
   gameObjects = gameObjects.filter((obj) => obj.y < canvas.height);
-
   for (const obj of gameObjects) {
     ctx.fillStyle = obj.color;
     ctx.beginPath();
@@ -125,7 +142,6 @@ function updateGame() {
 }
 
 function spawnObject() {
-  const colors = ["blue", "green", "red"];
   const pick = Math.random();
   let type = "normal";
   let color = "blue";
@@ -176,7 +192,7 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-// Leaderboard Logic
+// 🏆 Leaderboard & Player Info
 function fetchPlayerScore() {
   fetch(`/player/${user.telegramId}`)
     .then((res) => res.json())
@@ -215,12 +231,22 @@ function switchLeaderboard() {
   fetchLeaderboards();
 }
 
-// Start up logic
+// 🚀 On Load
 window.onload = () => {
-  const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-  if (tgUser) {
-    user.telegramId = tgUser.id.toString();
-    user.username = tgUser.username || "anon" + tgUser.id;
+  loadUser();
+
+  if (!user.telegramId) {
+    const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+    if (tgUser) {
+      user.telegramId = tgUser.id.toString();
+      user.username = tgUser.username || "anon" + tgUser.id;
+      persistUser();
+    }
+  }
+
+  if (user.wallet) {
+    document.getElementById("walletInput").value = user.wallet;
+    document.getElementById("startBtn").disabled = false;
     fetchPlayerScore();
     fetchLeaderboards();
   }
