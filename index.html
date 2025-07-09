@@ -15,7 +15,7 @@
     }
 
     .container {
-      max-width: 400px;
+      max-width: 350px;
       margin: auto;
       text-align: center;
     }
@@ -23,27 +23,45 @@
     input, button {
       padding: 10px;
       margin: 5px 0;
-      width: 90%;
+      width: 95%;
       font-size: 16px;
     }
 
     canvas {
       border: 2px solid black;
-      margin: 10px 0;
       max-width: 100%;
-      height: auto;
+      width: 100%;
+      height: 300px; /* Smaller visual height */
+      display: block;
+      margin: 10px auto;
+      touch-action: manipulation;
     }
 
     .leaderboard {
-      margin-top: 20px;
-      background: #fff;
+      background: white;
       padding: 10px;
       border-radius: 8px;
+      margin-top: 10px;
     }
 
     #leaderboardList {
       list-style: none;
-      padding-left: 0;
+      padding: 0;
+      margin: 0;
+      text-align: left;
+    }
+
+    p {
+      margin: 5px 0;
+    }
+
+    code {
+      display: inline-block;
+      word-break: break-all;
+      font-size: 13px;
+      background: #f4f4f4;
+      padding: 5px;
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -58,7 +76,7 @@
     <button onclick="submitReferral()">Submit Referral</button>
 
     <button id="startBtn" onclick="startGame()">Start Game</button>
-    <canvas id="gameCanvas" width="300" height="400"></canvas>
+    <canvas id="gameCanvas" width="300" height="300"></canvas>
 
     <p id="currentScore">Score: 0</p>
     <p id="totalScore">Total Score: 0</p>
@@ -69,7 +87,7 @@
       <ul id="leaderboardList"></ul>
     </div>
 
-    <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
+    <p><strong>Send 0.5 TON</strong> to qualify for 5× airdrop:</p>
     <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
   </div>
 
