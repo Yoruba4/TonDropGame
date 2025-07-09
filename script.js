@@ -1,172 +1,57 @@
-const telegram = window.Telegram.WebApp;
-let telegramId = null;
-let username = null;
-let wallet = localStorage.getItem("wallet") || "";
-let score = 0;
-let gameInterval = null;
-let gameRunning = false;
-let ballSpeed = 2;
-let dropDelay = 1000; // 1 second between drops
+// script.js - Full, Fixed for Red Bomb, Freeze Ball, Score Submit Limiting
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const balls = [];
+const canvas = document.getElementById("gameCanvas"); const ctx = canvas.getContext("2d"); const startBtn = document.getElementById("startBtn"); const currentScoreEl = document.getElementById("currentScore"); const totalScoreEl = document.getElementById("totalScore"); const leaderboardList = document.getElementById("leaderboardList"); const multiplierStatus = document.getElementById("multiplierStatus");
 
-document.getElementById("walletInput").value = wallet;
+let score = 0; let totalScore = 0; let gameInterval; let gameObjects = []; let isFrozen = false; let scoreSubmitted = false; let currentLeaderboard = "global"; // or "competition"
 
-telegram.ready();
-if (telegram.initDataUnsafe?.user?.id) {
-  telegramId = telegram.initDataUnsafe.user.id.toString();
-  username = telegram.initDataUnsafe.user.username || "";
-} else {
-  alert("Telegram ID not found. Please open from Telegram.");
-}
+let user = { telegramId: null, username: null, wallet: null, };
 
-// Save wallet
-function saveWallet() {
-  wallet = document.getElementById("walletInput").value.trim();
-  if (!wallet || !telegramId) return alert("Enter wallet");
+function saveWallet() { const walletInput = document.getElementById("walletInput").value; if (!walletInput || !window.Telegram.WebApp.initDataUnsafe.user) return;
 
-  localStorage.setItem("wallet", wallet);
+const tgUser = window.Telegram.WebApp.initDataUnsafe.user; user.telegramId = tgUser.id.toString(); user.username = tgUser.username || "anon" + tgUser.id; user.wallet = walletInput;
 
-  fetch("https://tondropgamebackend.onrender.com/save-wallet", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId, username, wallet }),
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        alert("Wallet saved. You can now start the game!");
-      } else {
-        alert("Failed to save wallet.");
-      }
-    });
-}
+fetch("/save-wallet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telegramId: user.telegramId, username: user.username, wallet: walletInput, }), }) .then((res) => res.json()) .then((data) => { if (data.success) { alert("Wallet saved. You can now start playing!"); startBtn.disabled = false; fetchPlayerScore(); } }); }
 
-// Game logic
-function startGame() {
-  if (!wallet) return alert("Save wallet first");
-  if (gameRunning) return;
+function fetchPlayerScore() { fetch(/player/${user.telegramId}) .then((res) => res.json()) .then((data) => { totalScore = data.totalScore || 0; totalScoreEl.textContent = Total Score: ${totalScore}; }); }
 
-  score = 0;
-  balls.length = 0;
-  gameRunning = true;
+function startGame() { if (!user.wallet) { alert("Please save your wallet first."); return; } score = 0; scoreSubmitted = false; currentScoreEl.textContent = "Score: 0"; gameObjects = []; gameInterval = setInterval(updateGame, 30); spawnObject(); }
 
-  gameInterval = setInterval(() => {
-    dropBall();
-  }, dropDelay);
+function stopGame() { clearInterval(gameInterval); gameInterval = null; submitScore(); }
 
-  requestAnimationFrame(updateGame);
-}
+function submitScore() { if (scoreSubmitted || score === 0) return; scoreSubmitted = true;
 
-function dropBall() {
-  const x = Math.random() * (canvas.width - 30);
-  const color = Math.random() < 0.1 ? "red" : Math.random() < 0.15 ? "blue" : "green";
-  balls.push({ x, y: 0, color });
-}
+fetch("/submit-score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telegramId: user.telegramId, username: user.username, score, }), }).then(() => fetchLeaderboards()); }
 
-function updateGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function updateGame() { ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  balls.forEach((ball, i) => {
-    ball.y += ballSpeed;
-    ctx.fillStyle = ball.color;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 15, 0, Math.PI * 2);
-    ctx.fill();
+if (!isFrozen) { for (const obj of gameObjects) { obj.y += 2; } }
 
-    if (ball.y > canvas.height) {
-      balls.splice(i, 1);
-    }
-  });
+gameObjects = gameObjects.filter((obj) => obj.y < canvas.height);
 
-  requestAnimationFrame(updateGame);
-}
+for (const obj of gameObjects) { ctx.fillStyle = obj.color; ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2); ctx.fill(); } }
 
-canvas.addEventListener("click", e => {
-  if (!gameRunning) return;
+function spawnObject() { const colors = ["blue", "green", "red"]; const types = ["normal", "freeze", "bomb"]; const pick = Math.random();
 
-  const rect = canvas.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
-  const clickY = e.clientY - rect.top;
+let type = "normal"; let color = "blue"; if (pick < 0.1) { type = "bomb"; color = "red"; } else if (pick < 0.2) { type = "freeze"; color = "green"; }
 
-  for (let i = 0; i < balls.length; i++) {
-    const ball = balls[i];
-    const dx = clickX - ball.x;
-    const dy = clickY - ball.y;
+gameObjects.push({ x: Math.random() * 280 + 10, y: 0, r: 15, type, color, });
 
-    if (Math.sqrt(dx * dx + dy * dy) < 15) {
-      if (ball.color === "red") {
-        score = Math.max(0, score - 1);
-      } else if (ball.color === "blue") {
-        freezeBalls();
-      } else {
-        score++;
-      }
-      balls.splice(i, 1);
-      break;
-    }
-  }
+if (gameInterval) { setTimeout(spawnObject, 700); // speed adjusted slower } }
 
-  document.getElementById("currentScore").textContent = "Score: " + score;
-});
+canvas.addEventListener("click", (e) => { const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top;
 
-function freezeBalls() {
-  clearInterval(gameInterval);
-  setTimeout(() => {
-    gameInterval = setInterval(dropBall, dropDelay);
-  }, 2000);
-}
+for (let i = 0; i < gameObjects.length; i++) { const obj = gameObjects[i]; const dx = obj.x - x; const dy = obj.y - y; if (dx * dx + dy * dy < obj.r * obj.r) { if (obj.type === "normal") { score++; currentScoreEl.textContent = Score: ${score}; } else if (obj.type === "freeze") { isFrozen = true; setTimeout(() => (isFrozen = false), 3000); } else if (obj.type === "bomb") { alert("Game Over! You hit a bomb."); stopGame(); return; } gameObjects.splice(i, 1); break; } } });
 
-// Submit Score
-function submitScore() {
-  if (!telegramId || !username) return;
+function fetchLeaderboards() { fetch("/leaderboard") .then((res) => res.json()) .then((players) => { if (currentLeaderboard === "global") { updateLeaderboard(players); } });
 
-  fetch("https://tondropgamebackend.onrender.com/submit-score", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId, username, score }),
-  })
-    .then(res => res.json())
-    .then(() => {
-      loadLeaderboards();
-    });
-}
+fetch("/competition-leaderboard") .then((res) => res.json()) .then((players) => { if (currentLeaderboard === "competition") { updateLeaderboard(players, true); } }); }
 
-// Load Leaderboards
-function loadLeaderboards(type = "global") {
-  const url =
-    type === "competition"
-      ? "https://tondropgamebackend.onrender.com/competition-leaderboard"
-      : "https://tondropgamebackend.onrender.com/leaderboard";
+function updateLeaderboard(players, isCompetition = false) { leaderboardList.innerHTML = ""; players.forEach((p, i) => { const li = document.createElement("li"); li.textContent = #${i + 1} @${p.username || p.telegramId} - ${isCompetition ? p.competitionScore : p.totalScore}; leaderboardList.appendChild(li); }); }
 
-  fetch(url)
-    .then(res => res.json())
-    .then(players => {
-      const list = document.getElementById("leaderboardList");
-      list.innerHTML = "";
-      players.forEach((p, i) => {
-        const li = document.createElement("li");
-        li.textContent = `${i + 1}. @${p.username || "user"} - ${type === "competition" ? p.competitionScore : p.totalScore}`;
-        list.appendChild(li);
-      });
-    });
-}
+function switchLeaderboard() { currentLeaderboard = currentLeaderboard === "global" ? "competition" : "global"; fetchLeaderboards(); }
 
-// Toggle Leaderboard
-document.getElementById("toggleLeaderboard").addEventListener("click", () => {
-  const label = document.getElementById("toggleLeaderboard").textContent;
-  if (label.includes("Competition")) {
-    loadLeaderboards("competition");
-    document.getElementById("toggleLeaderboard").textContent = "Show Global Leaderboard";
-  } else {
-    loadLeaderboards("global");
-    document.getElementById("toggleLeaderboard").textContent = "Show Competition Leaderboard";
-  }
-});
+// Startup window.onload = () => { if (window.Telegram.WebApp.initDataUnsafe.user) { const tgUser = window.Telegram.WebApp.initDataUnsafe.user; user.telegramId = tgUser.id.toString(); user.username = tgUser.username || "anon" + tgUser.id; fetchPlayerScore(); fetchLeaderboards(); } };
 
-// Load leaderboard on page load
-loadLeaderboards("global");
+
 
 
