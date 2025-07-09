@@ -3,100 +3,98 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TonDrop Game</title>
+  <title>TonDrop</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: #f0f8ff;
       margin: 0;
-      padding: 10px;
+      padding: 0;
+      background-color: #f3f3f3;
     }
 
     .container {
-      max-width: 360px;
-      margin: 0 auto;
-      text-align: center;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      padding: 20px;
     }
 
-    h2 {
-      font-size: 24px;
-      margin-bottom: 10px;
+    .left-panel, .right-panel {
+      flex: 1 1 45%;
+      min-width: 300px;
+      margin-bottom: 20px;
     }
 
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin: 6px 0;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+    .game-area {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
     canvas {
-      width: 100%;
-      height: auto;
-      max-height: 250px;
-      background: white;
-      border: 2px solid black;
-      margin-top: 10px;
-      touch-action: manipulation;
+      display: block;
+      margin: 0 auto;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      background: #ffffff;
     }
 
-    .scores, .leaderboard {
-      background: #fff;
-      border-radius: 6px;
+    input, button {
+      margin: 5px 0;
       padding: 10px;
-      margin-top: 15px;
-      text-align: left;
+      width: 100%;
+      font-size: 16px;
     }
 
-    .leaderboard ul {
+    ul {
       list-style: none;
       padding-left: 0;
-      margin-top: 10px;
     }
 
-    .leaderboard li {
-      margin-bottom: 4px;
-    }
-
-    code {
-      font-size: 13px;
-      background: #eee;
-      padding: 5px;
-      border-radius: 4px;
-      display: block;
+    li {
+      margin: 5px 0;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>TonDrop Game</h2>
 
-    <input type="text" id="walletInput" placeholder="Enter your TON wallet" />
-    <button onclick="saveWallet()">Save Wallet</button>
+    <!-- Game Section -->
+    <div class="left-panel">
+      <h1>TonDrop Game</h1>
 
-    <input type="text" id="referralInput" placeholder="Enter inviter username (optional)" />
-    <button onclick="submitReferral()">Submit Referral</button>
+      <div class="wallet-section">
+        <input type="text" id="walletInput" placeholder="Enter your TON wallet" />
+        <button onclick="saveWallet()">Save Wallet</button>
+      </div>
 
-    <button id="startBtn" onclick="startGame()">Start Game</button>
+      <div class="referral-section">
+        <input type="text" id="referralInput" placeholder="Enter inviter username (optional)" />
+        <button onclick="submitReferral()">Submit Referral</button>
+      </div>
 
-    <canvas id="gameCanvas" width="300" height="250"></canvas>
-
-    <div class="scores">
-      <p id="currentScore">Score: 0</p>
-      <p id="totalScore">Total Score: 0</p>
-      <p id="competitionScore">Competition Score: 0</p>
+      <div class="game-area">
+        <button id="startBtn" onclick="startGame()" disabled>Start Game</button>
+        <canvas id="gameCanvas" width="300" height="400"></canvas>
+        <p id="currentScore">Score: 0</p>
+        <p id="totalScore">Total Score: 0</p>
+        <p id="competitionScore">Competition Score: 0</p>
+      </div>
     </div>
 
-    <div class="leaderboard">
+    <!-- Leaderboard Section -->
+    <div class="right-panel">
+      <h2>Leaderboard</h2>
       <button id="toggleLeaderboard" onclick="switchLeaderboard()">Show Competition Leaderboard</button>
       <ul id="leaderboardList"></ul>
-    </div>
 
-    <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
-    <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
+      <h3>Send 0.5 TON to qualify for 5× airdrop:</h3>
+      <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
+    </div>
   </div>
 
   <script src="script.js"></script>
