@@ -4,18 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TonDrop Game</title>
-  <link rel="stylesheet" href="style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
+      background: #f0f8ff;
       margin: 0;
       padding: 10px;
-      background: #e7f2ff;
     }
 
     .container {
-      max-width: 400px;
+      max-width: 360px;
       margin: 0 auto;
       text-align: center;
     }
@@ -30,44 +29,44 @@
       padding: 10px;
       margin: 6px 0;
       font-size: 16px;
-      border: 1px solid #ccc;
       border-radius: 5px;
+      border: 1px solid #ccc;
     }
 
     canvas {
       width: 100%;
-      height: 220px;
+      height: auto;
+      max-height: 250px;
+      background: white;
       border: 2px solid black;
       margin-top: 10px;
       touch-action: manipulation;
     }
 
-    .score-info p {
-      font-size: 14px;
-      margin: 6px 0;
-    }
-
-    .leaderboard {
-      background: white;
+    .scores, .leaderboard {
+      background: #fff;
+      border-radius: 6px;
       padding: 10px;
       margin-top: 15px;
-      border-radius: 8px;
       text-align: left;
     }
 
-    #leaderboardList {
-      list-style-type: none;
-      padding: 0;
+    .leaderboard ul {
+      list-style: none;
+      padding-left: 0;
       margin-top: 10px;
     }
 
+    .leaderboard li {
+      margin-bottom: 4px;
+    }
+
     code {
-      background: #f4f4f4;
-      padding: 5px;
-      display: inline-block;
-      word-break: break-word;
-      border-radius: 5px;
       font-size: 13px;
+      background: #eee;
+      padding: 5px;
+      border-radius: 4px;
+      display: block;
     }
   </style>
 </head>
@@ -83,9 +82,9 @@
 
     <button id="startBtn" onclick="startGame()">Start Game</button>
 
-    <canvas id="gameCanvas" width="300" height="220"></canvas>
+    <canvas id="gameCanvas" width="300" height="250"></canvas>
 
-    <div class="score-info">
+    <div class="scores">
       <p id="currentScore">Score: 0</p>
       <p id="totalScore">Total Score: 0</p>
       <p id="competitionScore">Competition Score: 0</p>
@@ -96,7 +95,7 @@
       <ul id="leaderboardList"></ul>
     </div>
 
-    <p><strong>Send 0.5 TON</strong> to qualify for 5× airdrop:</p>
+    <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
     <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
   </div>
 
