@@ -1,3 +1,5 @@
+const API = "https://tondropgamebackend.onrender.com";
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const currentScoreEl = document.getElementById("currentScore");
@@ -18,12 +20,10 @@ let user = {
   wallet: null,
 };
 
-// Save to localStorage
 function persistUser() {
   localStorage.setItem("tonDropUser", JSON.stringify(user));
 }
 
-// Load from localStorage
 function loadUser() {
   const saved = localStorage.getItem("tonDropUser");
   if (saved) {
@@ -34,7 +34,6 @@ function loadUser() {
   }
 }
 
-// Save wallet
 function saveWallet() {
   const wallet = document.getElementById("walletInput").value;
   const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
@@ -44,7 +43,7 @@ function saveWallet() {
   user.username = tgUser.username || "anon" + tgUser.id;
   user.wallet = wallet;
 
-  fetch("/save-wallet", {
+  fetch(`${API}/save-wallet`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(user),
@@ -53,7 +52,7 @@ function saveWallet() {
     .then((data) => {
       if (data.success) {
         persistUser();
-        alert("Wallet saved. You can now start playing!");
+        alert("Wallet saved. You can start playing.");
         document.getElementById("startBtn").disabled = false;
         fetchPlayerScore();
         fetchLeaderboards();
@@ -63,12 +62,11 @@ function saveWallet() {
     });
 }
 
-// Submit referral
 function submitReferral() {
   const referrer = document.getElementById("referralInput").value;
   if (!referrer || !user.telegramId || !user.username) return;
 
-  fetch("/refer", {
+  fetch(`${API}/refer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -88,7 +86,6 @@ function submitReferral() {
     });
 }
 
-// Start game
 function startGame() {
   if (!user.wallet) {
     alert("Please save your wallet first.");
@@ -109,12 +106,11 @@ function stopGame() {
   submitScore();
 }
 
-// Submit score
 function submitScore() {
   if (scoreSubmitted || score <= 0) return;
   scoreSubmitted = true;
 
-  fetch("/submit-score", {
+  fetch(`${API}/submit-score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -123,12 +119,11 @@ function submitScore() {
       score,
     }),
   }).then(() => {
-    fetchPlayerScore();
     fetchLeaderboards();
+    fetchPlayerScore();
   });
 }
 
-// Update canvas
 function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!isFrozen) {
@@ -143,7 +138,6 @@ function updateGame() {
   }
 }
 
-// Spawn objects
 function spawnObject() {
   const pick = Math.random();
   let type = "normal";
@@ -168,7 +162,6 @@ function spawnObject() {
   if (gameInterval) setTimeout(spawnObject, 700);
 }
 
-// Click detection
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -196,9 +189,8 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-// Get player score
 function fetchPlayerScore() {
-  fetch(`/player/${user.telegramId}`)
+  fetch(`${API}/player/${user.telegramId}`)
     .then((res) => res.json())
     .then((data) => {
       totalScoreEl.textContent = `Total Score: ${data.totalScore || 0}`;
@@ -206,12 +198,11 @@ function fetchPlayerScore() {
     });
 }
 
-// Leaderboards
 function fetchLeaderboards() {
   const endpoint =
     currentLeaderboard === "global" ? "/leaderboard" : "/competition-leaderboard";
 
-  fetch(endpoint)
+  fetch(`${API}${endpoint}`)
     .then((res) => res.json())
     .then((players) => updateLeaderboard(players));
 }
@@ -236,15 +227,16 @@ function switchLeaderboard() {
   fetchLeaderboards();
 }
 
-// On load
 window.onload = () => {
   loadUser();
 
-  const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-  if (tgUser && !user.telegramId) {
-    user.telegramId = tgUser.id.toString();
-    user.username = tgUser.username || "anon" + tgUser.id;
-    persistUser();
+  if (!user.telegramId) {
+    const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+    if (tgUser) {
+      user.telegramId = tgUser.id.toString();
+      user.username = tgUser.username || "anon" + tgUser.id;
+      persistUser();
+    }
   }
 
   if (user.wallet) {
