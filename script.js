@@ -1,253 +1,58 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const currentScoreEl = document.getElementById("currentScore");
-const totalScoreEl = document.getElementById("totalScore");
-const competitionScoreEl = document.getElementById("competitionScore");
-const leaderboardList = document.getElementById("leaderboardList");
+// script.js - Fully Fixed with Bomb Ending Game, Freeze, Leaderboards, Score Persistence
 
-let score = 0;
-let gameObjects = [];
-let isFrozen = false;
-let scoreSubmitted = false;
-let gameInterval = null;
-let currentLeaderboard = "global";
+const canvas = document.getElementById("gameCanvas"); const ctx = canvas.getContext("2d"); const currentScoreEl = document.getElementById("currentScore"); const totalScoreEl = document.getElementById("totalScore"); const competitionScoreEl = document.getElementById("competitionScore"); const leaderboardList = document.getElementById("leaderboardList");
 
-let user = {
-  telegramId: null,
-  username: null,
-  wallet: null,
-};
+let score = 0; let gameObjects = []; let isFrozen = false; let scoreSubmitted = false; let gameInterval = null; let currentLeaderboard = "global";
 
-// 🧠 Save to LocalStorage
-function persistUser() {
-  localStorage.setItem("tonDropUser", JSON.stringify(user));
-}
+let user = { telegramId: null, username: null, wallet: null, };
 
-// 🧠 Load from LocalStorage
-function loadUser() {
-  const saved = localStorage.getItem("tonDropUser");
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    user.telegramId = parsed.telegramId;
-    user.username = parsed.username;
-    user.wallet = parsed.wallet;
-  }
-}
+function persistUser() { localStorage.setItem("tonDropUser", JSON.stringify(user)); }
 
-// 🚀 Save Wallet
-function saveWallet() {
-  const wallet = document.getElementById("walletInput").value;
-  const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-  if (!wallet || !tgUser) return;
+function loadUser() { const saved = localStorage.getItem("tonDropUser"); if (saved) { const parsed = JSON.parse(saved); user.telegramId = parsed.telegramId; user.username = parsed.username; user.wallet = parsed.wallet; } }
 
-  user.telegramId = tgUser.id.toString();
-  user.username = tgUser.username || "anon" + tgUser.id;
-  user.wallet = wallet;
+function saveWallet() { const wallet = document.getElementById("walletInput").value; const tgUser = window.Telegram.WebApp.initDataUnsafe.user; if (!wallet || !tgUser) return;
 
-  fetch("/save-wallet", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(user),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.success) {
-        persistUser();
-        alert("Wallet saved. You can start playing.");
-        document.getElementById("startBtn").disabled = false;
-        fetchPlayerScore();
-        fetchLeaderboards();
-      } else {
-        alert("Failed to save wallet");
-      }
-    });
-}
+user.telegramId = tgUser.id.toString(); user.username = tgUser.username || "anon" + tgUser.id; user.wallet = wallet;
 
-// 🧠 Referral
-function submitReferral() {
-  const referrer = document.getElementById("referralInput").value;
-  if (!referrer || !user.telegramId || !user.username) return;
+fetch("/save-wallet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(user), }) .then((res) => res.json()) .then((data) => { if (data.success) { persistUser(); alert("Wallet saved. You can start playing."); document.getElementById("startBtn").disabled = false; fetchPlayerScore(); fetchLeaderboards(); } else { alert("Failed to save wallet"); } }); }
 
-  fetch("/refer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: user.telegramId,
-      username: user.username,
-      referrer,
-    }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.success) {
-        alert("Referral submitted successfully.");
-        document.getElementById("referralInput").disabled = true;
-      } else {
-        alert(data.message || "Referral failed.");
-      }
-    });
-}
+function submitReferral() { const referrer = document.getElementById("referralInput").value; if (!referrer || !user.telegramId || !user.username) return;
 
-// 🕹️ Game Logic
-function startGame() {
-  if (!user.wallet) {
-    alert("Please save your wallet first.");
-    return;
-  }
+fetch("/refer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telegramId: user.telegramId, username: user.username, referrer, }), }) .then((res) => res.json()) .then((data) => { if (data.success) { alert("Referral submitted successfully."); document.getElementById("referralInput").disabled = true; } else { alert(data.message || "Referral failed."); } }); }
 
-  score = 0;
-  scoreSubmitted = false;
-  currentScoreEl.textContent = "Score: 0";
-  gameObjects = [];
+function startGame() { if (!user.wallet) { alert("Please save your wallet first."); return; }
 
-  spawnObject();
-  gameInterval = setInterval(updateGame, 30);
-}
+score = 0; scoreSubmitted = false; currentScoreEl.textContent = "Score: 0"; gameObjects = []; spawnObject(); gameInterval = setInterval(updateGame, 30); }
 
-function stopGame() {
-  clearInterval(gameInterval);
-  submitScore();
-}
+function stopGame() { clearInterval(gameInterval); gameInterval = null; submitScore(); }
 
-function submitScore() {
-  if (scoreSubmitted || score <= 0) return;
-  scoreSubmitted = true;
+function submitScore() { if (scoreSubmitted || score <= 0) return; scoreSubmitted = true;
 
-  fetch("/submit-score", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: user.telegramId,
-      username: user.username,
-      score,
-    }),
-  }).then(() => {
-    fetchLeaderboards();
-    fetchPlayerScore();
-  });
-}
+fetch("/submit-score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telegramId: user.telegramId, username: user.username, score, }), }).then(() => { fetchLeaderboards(); fetchPlayerScore(); }); }
 
-function updateGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!isFrozen) {
-    for (const obj of gameObjects) obj.y += 1.5;
-  }
-  gameObjects = gameObjects.filter((obj) => obj.y < canvas.height);
-  for (const obj of gameObjects) {
-    ctx.fillStyle = obj.color;
-    ctx.beginPath();
-    ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
+function updateGame() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (!isFrozen) { for (const obj of gameObjects) obj.y += 1.5; } gameObjects = gameObjects.filter((obj) => obj.y < canvas.height); for (const obj of gameObjects) { ctx.fillStyle = obj.color; ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2); ctx.fill(); } }
 
-function spawnObject() {
-  const pick = Math.random();
-  let type = "normal";
-  let color = "blue";
+function spawnObject() { const pick = Math.random(); let type = "normal"; let color = "blue";
 
-  if (pick < 0.08) {
-    type = "bomb";
-    color = "red";
-  } else if (pick < 0.18) {
-    type = "freeze";
-    color = "green";
-  }
+if (pick < 0.08) { type = "bomb"; color = "red"; } else if (pick < 0.18) { type = "freeze"; color = "green"; }
 
-  gameObjects.push({
-    x: Math.random() * 280 + 10,
-    y: 0,
-    r: 15,
-    type,
-    color,
-  });
+gameObjects.push({ x: Math.random() * 280 + 10, y: 0, r: 15, type, color, });
 
-  if (gameInterval) setTimeout(spawnObject, 700);
-}
+if (gameInterval) setTimeout(spawnObject, 700); }
 
-canvas.addEventListener("click", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+canvas.addEventListener("click", (e) => { const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top;
 
-  for (let i = 0; i < gameObjects.length; i++) {
-    const obj = gameObjects[i];
-    const dx = obj.x - x;
-    const dy = obj.y - y;
-    if (dx * dx + dy * dy < obj.r * obj.r) {
-      if (obj.type === "normal") {
-        score++;
-        currentScoreEl.textContent = `Score: ${score}`;
-      } else if (obj.type === "freeze") {
-        isFrozen = true;
-        setTimeout(() => (isFrozen = false), 3000);
-      } else if (obj.type === "bomb") {
-        alert("Game Over! You hit a bomb.");
-        stopGame();
-        return;
-      }
-      gameObjects.splice(i, 1);
-      break;
-    }
-  }
-});
+for (let i = 0; i < gameObjects.length; i++) { const obj = gameObjects[i]; const dx = obj.x - x; const dy = obj.y - y; if (dx * dx + dy * dy < obj.r * obj.r) { if (obj.type === "normal") { score++; currentScoreEl.textContent = Score: ${score}; } else if (obj.type === "freeze") { isFrozen = true; setTimeout(() => (isFrozen = false), 3000); } else if (obj.type === "bomb") { alert("💣 Game Over! You hit a bomb."); stopGame(); return; } gameObjects.splice(i, 1); break; } } });
 
-// 🏆 Leaderboard & Player Info
-function fetchPlayerScore() {
-  fetch(`/player/${user.telegramId}`)
-    .then((res) => res.json())
-    .then((data) => {
-      totalScoreEl.textContent = `Total Score: ${data.totalScore || 0}`;
-      competitionScoreEl.textContent = `Competition Score: ${data.competitionScore || 0}`;
-    });
-}
+function fetchPlayerScore() { fetch(/player/${user.telegramId}) .then((res) => res.json()) .then((data) => { totalScoreEl.textContent = Total Score: ${data.totalScore || 0}; competitionScoreEl.textContent = Competition Score: ${data.competitionScore || 0}; }); }
 
-function fetchLeaderboards() {
-  const endpoint =
-    currentLeaderboard === "global" ? "/leaderboard" : "/competition-leaderboard";
+function fetchLeaderboards() { const endpoint = currentLeaderboard === "global" ? "/leaderboard" : "/competition-leaderboard";
 
-  fetch(endpoint)
-    .then((res) => res.json())
-    .then((players) => updateLeaderboard(players));
-}
+fetch(endpoint) .then((res) => res.json()) .then((players) => updateLeaderboard(players)); }
 
-function updateLeaderboard(players) {
-  leaderboardList.innerHTML = "";
-  players.forEach((p, i) => {
-    const li = document.createElement("li");
-    li.textContent = `#${i + 1} @${p.username || p.telegramId} - ${
-      currentLeaderboard === "global" ? p.totalScore : p.competitionScore
-    }`;
-    leaderboardList.appendChild(li);
-  });
-}
+function updateLeaderboard(players) { leaderboardList.innerHTML = ""; players.forEach((p, i) => { const li = document.createElement("li"); li.textContent = #${i + 1} @${p.username || p.telegramId} - ${ currentLeaderboard === "global" ? p.totalScore : p.competitionScore }; leaderboardList.appendChild(li); }); }
 
-function switchLeaderboard() {
-  currentLeaderboard = currentLeaderboard === "global" ? "competition" : "global";
-  document.getElementById("toggleLeaderboard").textContent =
-    currentLeaderboard === "global"
-      ? "Show Competition Leaderboard"
-      : "Show Global Leaderboard";
-  fetchLeaderboards();
-}
+function switchLeaderboard() { currentLeaderboard = currentLeaderboard === "global" ? "competition" : "global"; document.getElementById("toggleLeaderboard").textContent = currentLeaderboard === "global" ? "Show Competition Leaderboard" : "Show Global Leaderboard"; fetchLeaderboards(); }
 
-// 🚀 On Load
-window.onload = () => {
-  loadUser();
+window.onload = () => { loadUser(); const tgUser = window.Telegram.WebApp.initDataUnsafe.user; if (tgUser) { user.telegramId = tgUser.id.toString(); user.username = tgUser.username || "anon" + tgUser.id; if (!user.wallet) { const input = document.getElementById("walletInput"); if (input) input.value = user.wallet; } else { document.getElementById("walletInput").value = user.wallet; document.getElementById("startBtn").disabled = false; fetchPlayerScore(); fetchLeaderboards(); } persistUser(); } };
 
-  if (!user.telegramId) {
-    const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-    if (tgUser) {
-      user.telegramId = tgUser.id.toString();
-      user.username = tgUser.username || "anon" + tgUser.id;
-      persistUser();
-    }
-  }
-
-  if (user.wallet) {
-    document.getElementById("walletInput").value = user.wallet;
-    document.getElementById("startBtn").disabled = false;
-    fetchPlayerScore();
-    fetchLeaderboards();
-  }
-};
