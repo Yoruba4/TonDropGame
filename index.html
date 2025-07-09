@@ -28,21 +28,26 @@
       <button id="startBtn" onclick="startGame()">Start Game</button>
       <canvas id="gameCanvas" width="300" height="400"></canvas>
       <p id="currentScore">Score: 0</p>
+      <p id="totalScore">Total Score: 0</p>
     </div>
 
     <button onclick="submitScore()">Submit Score</button>
 
     <!-- Leaderboard -->
     <div class="leaderboard">
-      <h3>Leaderboard</h3>
+      <h3 id="leaderboardTitle">Global Leaderboard</h3>
       <button id="toggleLeaderboard">Show Competition Leaderboard</button>
       <ul id="leaderboardList"></ul>
     </div>
 
-    <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
-    <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
-
-    <script src="script.js"></script>
+    <!-- Info -->
+    <div class="info">
+      <p><strong>Send 0.5 TON</strong> to qualify for 5× future airdrop:</p>
+      <code>UQByIARiM4JD6Hr75kctx3lY3Qn34E2x1tdfIukMlagZPpYY</code>
+    </div>
   </div>
+
+  <!-- Game Script -->
+  <script src="script.js"></script>
 </body>
 </html>
