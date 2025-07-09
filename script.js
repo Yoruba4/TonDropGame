@@ -21,13 +21,13 @@ let user = {
 
 // Save wallet
 function saveWallet() {
-  const walletInput = document.getElementById("walletInput").value;
-  if (!walletInput || !window.Telegram.WebApp.initDataUnsafe.user) return;
+  const wallet = document.getElementById("walletInput").value;
+  if (!wallet || !window.Telegram.WebApp.initDataUnsafe.user) return;
 
   const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
   user.telegramId = tgUser.id.toString();
-  user.username = tgUser.username || "anon" + tgUser.id;
-  user.wallet = walletInput;
+  user.username = tgUser.username || `anon${tgUser.id}`;
+  user.wallet = wallet;
 
   fetch("/save-wallet", {
     method: "POST",
@@ -35,33 +35,39 @@ function saveWallet() {
     body: JSON.stringify({
       telegramId: user.telegramId,
       username: user.username,
-      wallet: walletInput,
+      wallet: user.wallet,
     }),
   })
     .then((res) => res.json())
     .then((data) => {
       if (data.success) {
-        alert("Wallet saved successfully!");
+        alert("Wallet saved!");
         startBtn.disabled = false;
         fetchPlayerScore();
       }
     });
 }
 
-// Fetch player score
+// Get score and wallet on load
 function fetchPlayerScore() {
   fetch(`/player/${user.telegramId}`)
     .then((res) => res.json())
     .then((data) => {
-      totalScore = data.totalScore || 0;
-      totalScoreEl.textContent = `Total Score: ${totalScore}`;
+      if (data.totalScore !== undefined) {
+        totalScore = data.totalScore;
+        totalScoreEl.textContent = `Total Score: ${totalScore}`;
+        if (data.wallet) {
+          user.wallet = data.wallet;
+          document.getElementById("walletInput").value = user.wallet;
+          startBtn.disabled = false;
+        }
+      }
     });
 }
 
-// Start game
 function startGame() {
   if (!user.wallet) {
-    alert("Please save your wallet first.");
+    alert("Save your wallet before playing.");
     return;
   }
   score = 0;
@@ -72,14 +78,12 @@ function startGame() {
   spawnObject();
 }
 
-// Stop game
 function stopGame() {
   clearInterval(gameInterval);
   gameInterval = null;
   submitScore();
 }
 
-// Submit score
 function submitScore() {
   if (scoreSubmitted || score === 0) return;
   scoreSubmitted = true;
@@ -92,10 +96,12 @@ function submitScore() {
       username: user.username,
       score,
     }),
-  }).then(() => fetchLeaderboards());
+  }).then(() => {
+    fetchLeaderboards();
+    fetchPlayerScore();
+  });
 }
 
-// Game update
 function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -113,7 +119,6 @@ function updateGame() {
   }
 }
 
-// Object spawn
 function spawnObject() {
   const pick = Math.random();
   let type = "normal";
@@ -138,7 +143,6 @@ function spawnObject() {
   if (gameInterval) setTimeout(spawnObject, 600);
 }
 
-// Canvas click
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -156,7 +160,7 @@ canvas.addEventListener("click", (e) => {
         isFrozen = true;
         setTimeout(() => (isFrozen = false), 3000);
       } else if (obj.type === "bomb") {
-        alert("Game Over! You hit a bomb.");
+        alert("Game Over!");
         stopGame();
         return;
       }
@@ -168,30 +172,30 @@ canvas.addEventListener("click", (e) => {
 
 // Leaderboard
 function fetchLeaderboards() {
-  fetch(currentLeaderboard === "global" ? "/leaderboard" : "/competition-leaderboard")
-    .then((res) => res.json())
-    .then((players) => updateLeaderboard(players));
-}
+  const endpoint =
+    currentLeaderboard === "global" ? "/leaderboard" : "/competition-leaderboard";
 
-function updateLeaderboard(players) {
-  leaderboardList.innerHTML = "";
-  players.forEach((p, i) => {
-    const li = document.createElement("li");
-    li.textContent = `#${i + 1} @${p.username || p.telegramId} - ${
-      currentLeaderboard === "global" ? p.totalScore : p.competitionScore
-    }`;
-    leaderboardList.appendChild(li);
-  });
+  fetch(endpoint)
+    .then((res) => res.json())
+    .then((players) => {
+      leaderboardList.innerHTML = "";
+      players.forEach((p, i) => {
+        const li = document.createElement("li");
+        li.textContent = `#${i + 1} @${p.username || p.telegramId} - ${
+          currentLeaderboard === "global" ? p.totalScore : p.competitionScore
+        }`;
+        leaderboardList.appendChild(li);
+      });
+    });
 }
 
 function switchLeaderboard() {
   currentLeaderboard = currentLeaderboard === "global" ? "competition" : "global";
   document.querySelector("button[onclick='switchLeaderboard()']").textContent =
-    currentLeaderboard === "global" ? "Show Competition Leaderboard" : "Show Global Leaderboard";
+    currentLeaderboard === "global" ? "Switch to Competition" : "Switch to Global";
   fetchLeaderboards();
 }
 
-// Referral
 function submitReferral() {
   const refInput = document.getElementById("referralInput").value;
   if (!refInput || !user.telegramId || !user.username) return;
@@ -204,10 +208,10 @@ function submitReferral() {
       username: user.username,
       referrer: refInput,
     }),
-  }).then((res) => res.json());
+  });
 }
 
-// On load
+// On page load
 window.onload = () => {
   if (window.Telegram.WebApp.initDataUnsafe.user) {
     const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
@@ -217,4 +221,3 @@ window.onload = () => {
     fetchLeaderboards();
   }
 };
-
