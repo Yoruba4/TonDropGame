@@ -246,3 +246,38 @@ window.onload = () => {
     fetchLeaderboards();
   }
 };
+// 🕓 Show Global Competition Countdown
+function showCompetitionResetInfo() {
+  fetch("/competition-status")
+    .then((res) => res.json())
+    .then((data) => {
+      document.getElementById("lastReset").textContent =
+        "Last Reset: " + new Date(data.lastCompetitionReset).toLocaleDateString();
+      document.getElementById("nextReset").textContent =
+        "Next Reset: " + new Date(data.nextResetDate).toLocaleDateString();
+      document.getElementById("daysLeft").textContent =
+        "Days Remaining: " + data.daysRemaining + " day(s)";
+    });
+}
+
+window.onload = () => {
+  loadUser();
+
+  if (!user.telegramId) {
+    const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+    if (tgUser) {
+      user.telegramId = tgUser.id.toString();
+      user.username = tgUser.username || "anon" + tgUser.id;
+      persistUser();
+    }
+  }
+
+  if (user.wallet) {
+    document.getElementById("walletInput").value = user.wallet;
+    document.getElementById("startBtn").disabled = false;
+    fetchPlayerScore();
+    fetchLeaderboards();
+  }
+
+  showCompetitionResetInfo(); // 💡 call this on load
+};
